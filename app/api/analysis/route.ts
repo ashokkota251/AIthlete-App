@@ -11,11 +11,13 @@ export async function POST() {
 
   try {
     const provider = getStravaProvider({ accessToken: session.accessToken });
-    const activities = await provider.getRecentActivities(
-      session.stravaAthleteId ?? "",
-      10,
-    );
-    const analysis = await generateAnalysis(activities);
+    const athleteId = session.stravaAthleteId ?? "";
+    const [activities, stats, zones] = await Promise.all([
+      provider.getRecentActivities(athleteId, 10),
+      provider.getAthleteStats(athleteId).catch(() => null),
+      provider.getAthleteZones().catch(() => null),
+    ]);
+    const analysis = await generateAnalysis(activities, stats, zones);
     return NextResponse.json({ analysis, count: activities.length });
   } catch (err) {
     console.error("/api/analysis failed", err);

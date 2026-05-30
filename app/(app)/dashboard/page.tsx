@@ -7,22 +7,33 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 import { WeeklyChart } from "@/components/charts/weekly-chart";
 import { ActivityIcon } from "@/components/activity-icon";
 import { buildWeekStats } from "@/components/dashboard-stats";
+import { YearSoFarCard } from "@/components/dashboard/year-so-far-card";
+import { LoadTrendCard } from "@/components/dashboard/load-trend-card";
+import { SportBalanceDonut } from "@/components/dashboard/sport-balance-donut";
+import { ZonesCard } from "@/components/dashboard/zones-card";
+import { PrTimelineCard } from "@/components/dashboard/pr-timeline-card";
 import { formatKm, formatDuration, formatDateShort } from "@/lib/format";
-import { ArrowUpRight, TrendingUp, TrendingDown, Flame } from "lucide-react";
+import { ArrowUpRight, TrendingUp, TrendingDown, Flame, Mountain, Map, Star } from "lucide-react";
 
 const WEEKLY_GOAL_KM = 50;
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await auth();
   const provider = getStravaProvider({ accessToken: session!.accessToken! });
   const athleteId = session!.stravaAthleteId!;
-  const [activities, athlete] = await Promise.all([
-    provider.getRecentActivities(athleteId, 15),
+
+  // Fetch everything in parallel. Anything optional degrades gracefully.
+  const [activities, athlete, stats, zones] = await Promise.all([
+    provider.getRecentActivities(athleteId, 30),
     provider.getAthleteProfile(athleteId),
+    provider.getAthleteStats(athleteId).catch(() => null),
+    provider.getAthleteZones().catch(() => null),
   ]);
 
-  const stats = buildWeekStats(activities);
-  const goalPct = Math.min(1, stats.totalKm / WEEKLY_GOAL_KM);
+  const weekStats = buildWeekStats(activities);
+  const goalPct = Math.min(1, weekStats.totalKm / WEEKLY_GOAL_KM);
   const initials = `${athlete.firstName[0] ?? ""}${athlete.lastName[0] ?? ""}`;
   const today = activities[0] ? new Date(activities[0].startDate) : new Date();
   const dateLabel = today.toLocaleDateString("en-US", {
@@ -30,7 +41,7 @@ export default async function DashboardPage() {
     month: "short",
     day: "numeric",
   });
-  const trendUp = stats.deltaPct >= 0;
+  const trendUp = weekStats.deltaPct >= 0;
 
   return (
     <div className="space-y-5 pb-2">
@@ -47,7 +58,7 @@ export default async function DashboardPage() {
         </Link>
       </header>
 
-      {/* Hero coral card — This week */}
+      {/* This-week hero */}
       <CardCoral className="rise delay-1">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -56,7 +67,7 @@ export default async function DashboardPage() {
             </div>
             <div className="mt-1 flex items-baseline gap-2 nums">
               <span className="font-display-compressed text-[56px] leading-[0.95]">
-                {stats.totalKm.toFixed(1)}
+                {weekStats.totalKm.toFixed(1)}
               </span>
               <span className="text-base text-white/80 font-medium">km</span>
             </div>
@@ -64,7 +75,7 @@ export default async function DashboardPage() {
               {trendUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
               <span className="nums font-medium">
                 {trendUp ? "+" : ""}
-                {stats.deltaPct.toFixed(1)}%
+                {weekStats.deltaPct.toFixed(1)}%
               </span>
               <span className="text-white/70">vs last week</span>
             </div>
@@ -89,13 +100,15 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Inline stat ticker */}
         <div className="mt-5 pt-4 border-t border-white/20 grid grid-cols-3 gap-2">
-          <Inline value={String(stats.count)} label="sessions" />
-          <Inline value={formatDuration(stats.totalSeconds)} label="moving" />
-          <Inline value={`${Math.round(stats.totalElevation)}m`} label="elev" />
+          <Inline value={String(weekStats.count)} label="sessions" />
+          <Inline value={formatDuration(weekStats.totalSeconds)} label="moving" />
+          <Inline value={`${Math.round(weekStats.totalElevation)}m`} label="elev" />
         </div>
       </CardCoral>
+
+      {/* Year so far (Phase A1) */}
+      {stats && <YearSoFarCard stats={stats} />}
 
       {/* Weekly chart */}
       <Card className="rise delay-2">
@@ -103,13 +116,25 @@ export default async function DashboardPage() {
           label="Weekly Activity"
           trailing={
             <span className="text-[11px] text-ink-400 nums">
-              Mo – Su · {formatKm(stats.totalKm * 1000, 1)}
+              Mo – Su · {formatKm(weekStats.totalKm * 1000, 1)}
             </span>
           }
         >
-          <WeeklyChart data={stats.perDay} />
+          <WeeklyChart data={weekStats.perDay} />
         </CardSection>
       </Card>
+
+      {/* Training load (Phase A2) */}
+      <LoadTrendCard activities={activities} />
+
+      {/* Time in zone (Phase B1) */}
+      <ZonesCard activities={activities} zones={zones} />
+
+      {/* Sport balance (Phase A3) */}
+      <SportBalanceDonut activities={activities} />
+
+      {/* PR timeline (Phase B3) */}
+      <PrTimelineCard activities={activities} />
 
       {/* Two-up: streak + longest */}
       <div className="grid grid-cols-2 gap-3 rise delay-3">
@@ -118,7 +143,7 @@ export default async function DashboardPage() {
             <Flame size={11} className="text-coral" /> Streak
           </div>
           <div className="flex items-baseline gap-1 nums">
-            <span className="font-display-compressed text-4xl leading-none">{stats.count >= 5 ? "12" : "6"}</span>
+            <span className="font-display-compressed text-4xl leading-none">{weekStats.count >= 5 ? "12" : "6"}</span>
             <span className="text-xs text-ink-400">days</span>
           </div>
           <div className="text-[11px] text-ink-500 leading-snug">
@@ -128,17 +153,17 @@ export default async function DashboardPage() {
 
         <Card className="!p-4 flex flex-col gap-3">
           <div className="eyebrow">Longest</div>
-          {stats.longest ? (
+          {weekStats.longest ? (
             <>
               <div className="flex items-baseline gap-1 nums">
                 <span className="font-display-compressed text-4xl leading-none">
-                  {(stats.longest.distance / 1000).toFixed(1)}
+                  {(weekStats.longest.distance / 1000).toFixed(1)}
                 </span>
                 <span className="text-xs text-ink-400">km</span>
               </div>
               <div className="text-[11px] text-ink-500 leading-snug flex items-center gap-1">
-                <ActivityIcon type={stats.longest.type} size={12} />
-                <span className="truncate">{stats.longest.name}</span>
+                <ActivityIcon type={weekStats.longest.type} size={12} />
+                <span className="truncate">{weekStats.longest.name}</span>
               </div>
             </>
           ) : (
@@ -148,39 +173,76 @@ export default async function DashboardPage() {
       </div>
 
       {/* Most active day */}
-      {stats.mostActiveDay && stats.mostActiveDay.activity && (
+      {weekStats.mostActiveDay && weekStats.mostActiveDay.activity && (
         <Card className="rise delay-4 flex items-center justify-between">
           <div>
             <div className="eyebrow mb-1">Most Active Day</div>
             <div className="flex items-baseline gap-2 nums">
               <span className="font-display-wide text-2xl text-ink-900">
-                {stats.mostActiveDay.day === "Mo" ? "Monday" :
-                 stats.mostActiveDay.day === "Tu" ? "Tuesday" :
-                 stats.mostActiveDay.day === "We" ? "Wednesday" :
-                 stats.mostActiveDay.day === "Th" ? "Thursday" :
-                 stats.mostActiveDay.day === "Fr" ? "Friday" :
-                 stats.mostActiveDay.day === "Sa" ? "Saturday" : "Sunday"}
+                {weekStats.mostActiveDay.day === "Mo" ? "Monday" :
+                 weekStats.mostActiveDay.day === "Tu" ? "Tuesday" :
+                 weekStats.mostActiveDay.day === "We" ? "Wednesday" :
+                 weekStats.mostActiveDay.day === "Th" ? "Thursday" :
+                 weekStats.mostActiveDay.day === "Fr" ? "Friday" :
+                 weekStats.mostActiveDay.day === "Sa" ? "Saturday" : "Sunday"}
               </span>
               <span className="text-xs text-ink-400">·</span>
-              <span className="text-xs text-ink-500">{formatDateShort(stats.mostActiveDay.activity.startDate)}</span>
+              <span className="text-xs text-ink-500">{formatDateShort(weekStats.mostActiveDay.activity.startDate)}</span>
             </div>
             <div className="mt-1 flex items-center gap-2 text-[12px] text-ink-500">
-              <ActivityIcon type={stats.mostActiveDay.activity.type} size={13} className="text-coral" />
-              <span className="truncate">{stats.mostActiveDay.activity.name}</span>
+              <ActivityIcon type={weekStats.mostActiveDay.activity.type} size={13} className="text-coral" />
+              <span className="truncate">{weekStats.mostActiveDay.activity.name}</span>
               <span className="text-ink-300">·</span>
-              <span className="nums">{(stats.mostActiveDay.km).toFixed(1)} km</span>
+              <span className="nums">{(weekStats.mostActiveDay.km).toFixed(1)} km</span>
             </div>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-coral-50 grid place-items-center">
             <span className="font-display-compressed text-2xl text-coral leading-none">
-              {Math.round(stats.mostActiveDay.km)}
+              {Math.round(weekStats.mostActiveDay.km)}
             </span>
           </div>
         </Card>
       )}
 
+      {/* Segments + Routes link cards (Phase C1 + C2) */}
+      <div className="grid grid-cols-2 gap-3 rise delay-5">
+        <Link href="/segments" className="block">
+          <Card className="!p-4 h-full flex flex-col gap-2 hover:shadow-elev hover:border-coral-100 border border-transparent transition-all">
+            <span className="size-9 rounded-xl bg-coral-50 grid place-items-center text-coral">
+              <Star size={15} strokeWidth={2.2} />
+            </span>
+            <div className="mt-auto">
+              <div className="eyebrow !text-coral">Segments</div>
+              <div className="font-display-wide text-[15px] text-ink-900 mt-0.5">
+                Your benchmarks
+              </div>
+              <div className="text-[11px] text-ink-500 mt-0.5">
+                Track PRs on starred segments →
+              </div>
+            </div>
+          </Card>
+        </Link>
+
+        <Link href="/routes" className="block">
+          <Card className="!p-4 h-full flex flex-col gap-2 hover:shadow-elev hover:border-coral-100 border border-transparent transition-all">
+            <span className="size-9 rounded-xl bg-coral-50 grid place-items-center text-coral">
+              <Map size={15} strokeWidth={2.2} />
+            </span>
+            <div className="mt-auto">
+              <div className="eyebrow !text-coral">Routes</div>
+              <div className="font-display-wide text-[15px] text-ink-900 mt-0.5">
+                Saved + GPX
+              </div>
+              <div className="text-[11px] text-ink-500 mt-0.5">
+                Export to your watch →
+              </div>
+            </div>
+          </Card>
+        </Link>
+      </div>
+
       {/* CTA card → Analysis */}
-      <Link href="/analysis" className="block rise delay-5">
+      <Link href="/analysis" className="block rise delay-6">
         <Card className="flex items-center justify-between hover:shadow-elev transition-shadow group">
           <div>
             <div className="eyebrow mb-1 text-coral">Weekly Intelligence</div>

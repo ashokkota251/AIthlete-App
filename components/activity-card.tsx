@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Activity } from "@/lib/strava/types";
 import {
   formatKm,
@@ -7,14 +8,15 @@ import {
   formatTimeShort,
 } from "@/lib/format";
 import { ActivityIcon, labelFor } from "@/components/activity-icon";
-import { Heart, Mountain } from "lucide-react";
+import { Heart, Mountain, Trophy, ChevronRight } from "lucide-react";
 
 export function ActivityCard({ activity, index = 0 }: { activity: Activity; index?: number }) {
   const isDistanceBased = activity.distance > 0;
 
   return (
-    <article
-      className="card !p-4 hover:shadow-elev transition-shadow rise"
+    <Link
+      href={`/activities/${activity.id}`}
+      className="card !p-4 block group hover:shadow-elev hover:border-coral-100 border border-transparent transition-all rise"
       style={{ animationDelay: `${0.04 + index * 0.04}s` }}
     >
       <header className="flex items-start gap-3">
@@ -27,8 +29,14 @@ export function ActivityCard({ activity, index = 0 }: { activity: Activity; inde
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <h3 className="font-display-wide text-[15px] leading-tight text-ink-900 truncate">
-              {activity.name}
+            <h3 className="font-display-wide text-[15px] leading-tight text-ink-900 truncate flex items-center gap-1.5">
+              <span className="truncate">{activity.name}</span>
+              {activity.prCount != null && activity.prCount > 0 && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] uppercase tracking-widest font-semibold text-coral shrink-0">
+                  <Trophy size={9} strokeWidth={2.4} />
+                  {activity.prCount}
+                </span>
+              )}
             </h3>
             <span className="eyebrow shrink-0">{labelFor(activity.type)}</span>
           </div>
@@ -76,7 +84,13 @@ export function ActivityCard({ activity, index = 0 }: { activity: Activity; inde
           “{activity.description}”
         </p>
       )}
-    </article>
+
+      <div className="mt-2 pt-1 flex items-center justify-end text-[11px] text-ink-300 group-hover:text-coral transition-colors">
+        <span className="inline-flex items-center gap-0.5 font-medium">
+          Open <ChevronRight size={12} strokeWidth={2.2} />
+        </span>
+      </div>
+    </Link>
   );
 }
 

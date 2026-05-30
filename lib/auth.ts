@@ -43,7 +43,8 @@ const StravaProvider: NextAuthConfig["providers"][number] = {
   authorization: {
     url: STRAVA_AUTH_URL,
     params: {
-      scope: "read,activity:read_all",
+      // profile:read_all is needed for GET /athlete/zones (time-in-zone panel)
+      scope: "read,activity:read_all,profile:read_all",
       approval_prompt: "auto",
       response_type: "code",
     },

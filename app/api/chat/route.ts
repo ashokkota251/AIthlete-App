@@ -23,15 +23,19 @@ export async function POST(req: Request) {
   let body: z.infer<typeof bodySchema>;
   try {
     body = bodySchema.parse(await req.json());
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
   const provider = getStravaProvider({ accessToken: session.accessToken });
-  const activities = await provider.getRecentActivities(
-    session.stravaAthleteId ?? "",
-    10,
-  );
+  const athleteId = session.stravaAthleteId ?? "";
+
+  // Fetch in parallel — degrade gracefully if any single one fails.
+  const [activities, stats, zones] = await Promise.all([
+    provider.getRecentActivities(athleteId, 10),
+    provider.getAthleteStats(athleteId).catch(() => null),
+    provider.getAthleteZones().catch(() => null),
+  ]);
 
   if (!hasAI()) {
     return NextResponse.json({
@@ -41,7 +45,7 @@ export async function POST(req: Request) {
   }
 
   const ai = getAnthropic()!;
-  const system = buildCoachSystemPrompt(activities);
+  const system = buildCoachSystemPrompt({ activities, stats, zones });
 
   try {
     const response = await ai.messages.create({
