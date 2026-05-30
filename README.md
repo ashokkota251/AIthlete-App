@@ -81,6 +81,25 @@ To rotate the production `AUTH_SECRET`: `npm run deploy:rotate-secret`.
 
 **Required Strava-side step after the first deploy:** copy the printed Vercel hostname into the **Authorization Callback Domain** field at https://www.strava.com/settings/api → your app. Save. Then sign-in will work.
 
+### Auto-deploy on `git push` (GitHub Actions)
+
+A workflow at `.github/workflows/deploy.yml` runs on every push to `main` (production deploy) and on every pull request (preview deploy with a URL commented onto the PR). It typechecks first, then runs `vercel pull → vercel build → vercel deploy --prebuilt`.
+
+**One-time setup — three GitHub repo secrets to add:**
+
+1. Generate a Vercel access token at https://vercel.com/account/tokens → "Create" → scope: Full account, no expiration (or your preferred lifetime).
+2. Add the three secrets on GitHub (repo → Settings → Secrets and variables → Actions → "New repository secret"):
+
+   | Secret name | Value |
+   |---|---|
+   | `VERCEL_TOKEN` | the token from step 1 |
+   | `VERCEL_ORG_ID` | from your local `.vercel/project.json` → `orgId` |
+   | `VERCEL_PROJECT_ID` | from your local `.vercel/project.json` → `projectId` |
+
+3. If you've ever connected this repo via the Vercel dashboard's "Git Integration", **disconnect it** (Vercel project → Settings → Git → Disconnect). Otherwise every push triggers two deploys (one from Vercel, one from Actions). The Actions workflow is the canonical path going forward.
+
+After that, every `git push origin main` builds + deploys to production. Every PR gets a preview deploy with the URL posted as a comment.
+
 ## Design system
 
 - **Display type**: Bricolage Grotesque (variable axes for editorial weight)
