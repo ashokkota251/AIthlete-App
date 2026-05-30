@@ -1,0 +1,360 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Strava API v3",
+    "description": "The [Swagger Playground](https://developers.strava.com/playground) is the easiest way to familiarize yourself with the Strava API by submitting HTTP requests and observing the responses before you write any client code. It will show what a response will look like with different endpoints depending on the authorization scope you receive from your athletes. To use the Playground, go to https://www.strava.com/settings/api and change your “Authorization Callback Domain” to developers.strava.com. Please note, we only support Swagger 2.0. There is a known issue where you can only select one scope at a time. For more information, please check the section “client code” at https://developers.strava.com/docs.",
+    "version": "3.0.0"
+  },
+  "host": "www.strava.com",
+  "schemes": ["https"],
+  "basePath": "/api/v3",
+  "produces": ["application/json"],
+  "securityDefinitions": {
+    "strava_oauth": {
+      "type": "oauth2",
+      "flow": "accessCode",
+      "authorizationUrl": "https://www.strava.com/api/v3/oauth/authorize",
+      "tokenUrl": "https://www.strava.com/api/v3/oauth/token",
+      "scopes": {
+        "read": "Read public segments, public routes, public profile data, public posts, public events, club feeds, and leaderboards",
+        "read_all": "Read private routes, private segments, and private events for the user",
+        "profile:read_all": "Read all profile information even if the user has set their profile visibility to Followers or Only You",
+        "profile:write": "Update the user's weight and Functional Threshold Power (FTP), and access to star or unstar segments on their behalf",
+        "activity:read": "Read the user's activity data for activities that are visible to Everyone and Followers, excluding privacy zone data",
+        "activity:read_all": "The same access as activity:read, plus privacy zone data and access to read the user's activities with visibility set to Only You",
+        "activity:write": "Access to create manual activities and uploads, and access to edit any activities that are visible to the app, based on activity read access level"
+      }
+    }
+  },
+  "security": [{ "strava_oauth": ["public"] }],
+  "parameters": {
+    "page": {
+      "name": "page",
+      "in": "query",
+      "description": "Page number. Defaults to 1.",
+      "type": "integer"
+    },
+    "perPage": {
+      "name": "per_page",
+      "in": "query",
+      "description": "Number of items per page. Defaults to 30.",
+      "type": "integer",
+      "default": 30
+    }
+  },
+  "paths": {
+    "/athletes/{id}/stats": {
+      "get": {
+        "operationId": "getStats",
+        "summary": "Get Athlete Stats",
+        "description": "Returns the activity stats of an athlete. Only includes data from activities set to Everyone visibilty.",
+        "tags": ["Athletes"],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "type": "integer", "format": "int64" }],
+        "responseShape": "ActivityStats { biggest_ride_distance, biggest_climb_elevation_gain, recent_ride_totals, recent_run_totals, recent_swim_totals, ytd_ride_totals, ytd_run_totals, ytd_swim_totals, all_ride_totals, all_run_totals, all_swim_totals } where each *_totals is { count, distance (m), moving_time (s), elapsed_time (s), elevation_gain (m), achievement_count? }"
+      }
+    },
+    "/athlete": {
+      "get": {
+        "operationId": "getLoggedInAthlete",
+        "summary": "Get Authenticated Athlete",
+        "description": "Returns the currently authenticated athlete. Tokens with profile:read_all scope will receive a detailed athlete representation; all others will receive a summary representation.",
+        "tags": ["Athletes"],
+        "responseExample": {
+          "id": 1234567890987654321,
+          "username": "marianne_t",
+          "resource_state": 3,
+          "firstname": "Marianne",
+          "lastname": "Teutenberg",
+          "city": "San Francisco",
+          "state": "CA",
+          "country": "US",
+          "sex": "F",
+          "premium": true,
+          "created_at": "2017-11-14T02:30:05Z",
+          "updated_at": "2018-02-06T19:32:20Z",
+          "badge_type_id": 4,
+          "profile_medium": "https://xxxxxx.cloudfront.net/pictures/athletes/.../medium.jpg",
+          "profile": "https://xxxxx.cloudfront.net/pictures/athletes/.../large.jpg",
+          "follower_count": 5,
+          "friend_count": 5,
+          "mutual_friend_count": 0,
+          "athlete_type": 1,
+          "date_preference": "%m/%d/%Y",
+          "measurement_preference": "feet",
+          "clubs": [],
+          "ftp": null,
+          "weight": 0,
+          "bikes": [{ "id": "b12345678987655", "primary": true, "name": "EMC", "resource_state": 2, "distance": 0 }],
+          "shoes": [{ "id": "g12345678987655", "primary": true, "name": "adidas", "resource_state": 2, "distance": 4904 }]
+        }
+      },
+      "put": {
+        "operationId": "updateLoggedInAthlete",
+        "summary": "Update Athlete (weight)",
+        "consumes": ["multipart/form-data"],
+        "tags": ["Athletes"],
+        "parameters": [{ "name": "weight", "in": "formData", "required": true, "type": "number", "format": "float" }]
+      }
+    },
+    "/athlete/zones": {
+      "get": {
+        "operationId": "getLoggedInAthleteZones",
+        "summary": "Get Zones",
+        "description": "Returns the the authenticated athlete's heart rate and power zones. Requires profile:read_all.",
+        "tags": ["Athletes"],
+        "responseShape": "Array<{ distribution_buckets: [{min,max,time}], type: 'heart_rate' | 'power', resource_state: 3, sensor_based: boolean, custom_zones?: boolean, points?: number }>"
+      }
+    },
+    "/segments/{id}": {
+      "get": {
+        "operationId": "getSegmentById",
+        "summary": "Get Segment",
+        "description": "Returns the specified segment. read_all scope required in order to retrieve athlete-specific segment information, or to retrieve private segments.",
+        "tags": ["Segments"],
+        "responseExample": {
+          "id": 229781,
+          "name": "Hawk Hill",
+          "activity_type": "Ride",
+          "distance": 2684.82,
+          "average_grade": 5.7,
+          "maximum_grade": 14.2,
+          "elevation_high": 245.3,
+          "elevation_low": 92.4,
+          "start_latlng": [37.8331119, -122.4834356],
+          "end_latlng": [37.8280722, -122.4981393],
+          "climb_category": 1,
+          "city": "San Francisco",
+          "private": false,
+          "starred": false,
+          "total_elevation_gain": 155.733,
+          "effort_count": 309974,
+          "athlete_count": 30623,
+          "star_count": 2428,
+          "athlete_segment_stats": { "pr_elapsed_time": 553, "pr_date": "1993-04-03", "effort_count": 2 }
+        }
+      }
+    },
+    "/segments/starred": {
+      "get": {
+        "operationId": "getLoggedInAthleteStarredSegments",
+        "summary": "List Starred Segments",
+        "description": "List of the authenticated athlete's starred segments. Private segments are filtered out unless requested by a token with read_all scope.",
+        "tags": ["Segments"],
+        "params": ["page", "per_page"]
+      }
+    },
+    "/segments/{id}/starred": {
+      "put": {
+        "operationId": "starSegment",
+        "summary": "Star Segment",
+        "description": "Stars/Unstars the given segment for the authenticated athlete. Requires profile:write scope.",
+        "tags": ["Segments"],
+        "params": ["id (path)", "starred (formData boolean)"]
+      }
+    },
+    "/segment_efforts": {
+      "get": {
+        "operationId": "getEffortsBySegmentId",
+        "summary": "List Segment Efforts",
+        "description": "Returns a set of the authenticated athlete's segment efforts for a given segment. Requires subscription.",
+        "tags": ["SegmentEfforts"],
+        "params": ["segment_id", "start_date_local (ISO)", "end_date_local (ISO)", "per_page"]
+      }
+    },
+    "/segments/explore": {
+      "get": {
+        "operationId": "exploreSegments",
+        "summary": "Explore segments",
+        "description": "Returns the top 10 segments matching a specified query.",
+        "tags": ["Segments"],
+        "params": ["bounds (sw_lat,sw_lng,ne_lat,ne_lng)", "activity_type (running|riding)", "min_cat 0..5", "max_cat 0..5"]
+      }
+    },
+    "/segment_efforts/{id}": {
+      "get": {
+        "operationId": "getSegmentEffortById",
+        "summary": "Get Segment Effort",
+        "description": "Returns a segment effort from an activity that is owned by the authenticated athlete. Requires subscription.",
+        "tags": ["SegmentEfforts"]
+      }
+    },
+    "/activities": {
+      "post": {
+        "operationId": "createActivity",
+        "summary": "Create an Activity",
+        "description": "Creates a manual activity for an athlete, requires activity:write scope.",
+        "tags": ["Activities"],
+        "formData": ["name (req)", "type", "sport_type (req)", "start_date_local (req, ISO)", "elapsed_time (req, s)", "description", "distance (m)", "trainer (0|1)", "commute (0|1)"]
+      }
+    },
+    "/activities/{id}": {
+      "get": {
+        "operationId": "getActivityById",
+        "summary": "Get Activity",
+        "description": "Returns the given activity that is owned by the authenticated athlete. Requires activity:read for Everyone and Followers activities. Requires activity:read_all for Only Me activities.",
+        "tags": ["Activities"],
+        "params": ["id", "include_all_efforts (boolean)"],
+        "responseHighlights": [
+          "distance", "moving_time", "elapsed_time", "total_elevation_gain",
+          "type", "sport_type", "start_date", "timezone", "utc_offset",
+          "start_latlng", "end_latlng",
+          "achievement_count", "kudos_count", "comment_count", "pr_count",
+          "map.polyline (encoded)", "map.summary_polyline",
+          "average_speed", "max_speed", "average_cadence", "average_temp",
+          "average_watts", "weighted_average_watts", "kilojoules", "max_watts",
+          "average_heartrate", "max_heartrate", "has_heartrate",
+          "elev_high", "elev_low",
+          "workout_type", "suffer_score", "calories",
+          "segment_efforts[]", "splits_metric[]", "laps[]",
+          "gear { id, name, distance }", "device_name", "trainer", "commute"
+        ]
+      },
+      "put": {
+        "operationId": "updateActivityById",
+        "summary": "Update Activity",
+        "description": "Updates the given activity that is owned by the authenticated athlete. Requires activity:write. Also requires activity:read_all in order to update Only Me activities",
+        "tags": ["Activities"]
+      }
+    },
+    "/athlete/activities": {
+      "get": {
+        "operationId": "getLoggedInAthleteActivities",
+        "summary": "List Athlete Activities",
+        "description": "Returns the activities of an athlete for a specific identifier. Requires activity:read. Only Me activities will be filtered out unless requested by a token with activity:read_all.",
+        "tags": ["Activities"],
+        "params": ["before (epoch s)", "after (epoch s)", "page", "per_page"],
+        "currentlyUsedBy": "lib/strava/real.ts -> RealStravaProvider.getRecentActivities()"
+      }
+    },
+    "/activities/{id}/laps": {
+      "get": {
+        "operationId": "getLapsByActivityId",
+        "summary": "List Activity Laps",
+        "description": "Returns the laps of an activity identified by an identifier.",
+        "tags": ["Activities"]
+      }
+    },
+    "/activities/{id}/zones": {
+      "get": {
+        "operationId": "getZonesByActivityId",
+        "summary": "Get Activity Zones (Summit / paid Strava)",
+        "description": "Returns the zones of a given activity. Requires activity:read for Everyone and Followers activities.",
+        "tags": ["Activities"]
+      }
+    },
+    "/activities/{id}/comments": {
+      "get": {
+        "operationId": "getCommentsByActivityId",
+        "summary": "List Activity Comments",
+        "tags": ["Activities"],
+        "params": ["page (deprecated -> after_cursor)", "per_page", "page_size", "after_cursor"]
+      }
+    },
+    "/activities/{id}/kudos": {
+      "get": {
+        "operationId": "getKudoersByActivityId",
+        "summary": "List Activity Kudoers",
+        "tags": ["Activities"]
+      }
+    },
+    "/clubs/{id}": {
+      "get": {
+        "operationId": "getClubById",
+        "summary": "Get Club",
+        "tags": ["Clubs"]
+      }
+    },
+    "/clubs/{id}/members": {
+      "get": { "operationId": "getClubMembersById", "summary": "List Club Members", "tags": ["Clubs"] }
+    },
+    "/clubs/{id}/admins": {
+      "get": { "operationId": "getClubAdminsById", "summary": "List Club Administrators", "tags": ["Clubs"] }
+    },
+    "/clubs/{id}/activities": {
+      "get": {
+        "operationId": "getClubActivitiesById",
+        "summary": "List Club Activities",
+        "description": "Retrieve recent activities from members of a specific club.",
+        "tags": ["Clubs"]
+      }
+    },
+    "/athlete/clubs": {
+      "get": { "operationId": "getLoggedInAthleteClubs", "summary": "List Athlete Clubs", "tags": ["Clubs"] }
+    },
+    "/gear/{id}": {
+      "get": {
+        "operationId": "getGearById",
+        "summary": "Get Equipment",
+        "tags": ["Gears"],
+        "responseExample": {
+          "id": "b1231",
+          "primary": false,
+          "resource_state": 3,
+          "distance": 388206,
+          "brand_name": "BMC",
+          "model_name": "Teammachine",
+          "frame_type": 3,
+          "description": "My Bike."
+        }
+      }
+    },
+    "/routes/{id}": {
+      "get": { "operationId": "getRouteById", "summary": "Get Route", "tags": ["Routes"] }
+    },
+    "/athletes/{id}/routes": {
+      "get": { "operationId": "getRoutesByAthleteId", "summary": "List Athlete Routes", "tags": ["Routes"] }
+    },
+    "/routes/{id}/export_gpx": {
+      "get": { "operationId": "getRouteAsGPX", "summary": "Export Route GPX", "tags": ["Routes"] }
+    },
+    "/routes/{id}/export_tcx": {
+      "get": { "operationId": "getRouteAsTCX", "summary": "Export Route TCX", "tags": ["Routes"] }
+    },
+    "/uploads": {
+      "post": {
+        "operationId": "createUpload",
+        "summary": "Upload Activity",
+        "description": "Uploads a new data file to create an activity from. Requires activity:write scope.",
+        "tags": ["Uploads"],
+        "formData": ["file", "name", "description", "trainer", "commute", "data_type (fit|fit.gz|tcx|tcx.gz|gpx|gpx.gz)", "external_id"]
+      }
+    },
+    "/uploads/{uploadId}": {
+      "get": { "operationId": "getUploadById", "summary": "Get Upload (poll status)", "tags": ["Uploads"] }
+    },
+    "/activities/{id}/streams": {
+      "get": {
+        "operationId": "getActivityStreams",
+        "summary": "Get Activity Streams",
+        "description": "Returns the given activity's streams. Requires activity:read scope.",
+        "tags": ["Streams"],
+        "params": ["keys (CSV: time|distance|latlng|altitude|velocity_smooth|heartrate|cadence|watts|temp|moving|grade_smooth)", "key_by_type=true"]
+      }
+    },
+    "/segment_efforts/{id}/streams": {
+      "get": { "operationId": "getSegmentEffortStreams", "summary": "Get Segment Effort Streams", "tags": ["Streams"] }
+    },
+    "/segments/{id}/streams": {
+      "get": {
+        "operationId": "getSegmentStreams",
+        "summary": "Get Segment Streams",
+        "tags": ["Streams"],
+        "params": ["keys (distance|latlng|altitude)", "key_by_type=true"]
+      }
+    },
+    "/routes/{id}/streams": {
+      "get": { "operationId": "getRouteStreams", "summary": "Get Route Streams", "tags": ["Streams"] }
+    }
+  },
+  "rateLimits": {
+    "tier1Default": "100 requests / 15 minutes, 1000 / day per app",
+    "headers": ["X-RateLimit-Limit", "X-RateLimit-Usage"],
+    "tier2": "Higher limits available on request"
+  },
+  "_notes": {
+    "savedAt": "2026-05-31",
+    "source": "user-provided in conversation",
+    "purpose": "Offline reference for the AIthlete dashboard roadmap. The full upstream OpenAPI 2.0 doc remains the source of truth at https://developers.strava.com/playground.",
+    "schemaShortcut": "Long polyline strings and detailed schema $refs from the source doc are elided here; see strava-api-reference.md for a human-readable summary keyed to dashboard features."
+  }
+}

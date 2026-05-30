@@ -100,6 +100,12 @@ A workflow at `.github/workflows/deploy.yml` runs on every push to `main` (produ
 
 After that, every `git push origin main` builds + deploys to production. Every PR gets a preview deploy with the URL posted as a comment.
 
+## Reference & roadmap
+
+- [`docs/strava-swagger.json`](docs/strava-swagger.json) — verbatim Strava API v3 Swagger spec, kept locally so the full endpoint catalogue is in the repo.
+- [`docs/strava-api-reference.md`](docs/strava-api-reference.md) — human-readable index keyed to AIthlete features: scope inventory, endpoints currently used, endpoints available, rate limits, key response shapes.
+- [`docs/dashboard-roadmap.md`](docs/dashboard-roadmap.md) — phased plan for upgrading the dashboard with the new endpoints, organised by training value and build cost.
+
 ## Design system
 
 - **Display type**: Bricolage Grotesque (variable axes for editorial weight)
