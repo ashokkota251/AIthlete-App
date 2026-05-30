@@ -58,6 +58,29 @@ lib/
 components/           — UI primitives + feature components
 ```
 
+## Deploy to Vercel
+
+First-time deploy from your local machine — single command:
+
+```powershell
+npm run deploy:setup
+```
+
+What it does:
+1. Installs the Vercel CLI globally (if not already present).
+2. Opens a browser to log into Vercel (if not already logged in).
+3. Creates the project on Vercel (or links to an existing one).
+4. Reads `AUTH_STRAVA_ID`, `AUTH_STRAVA_SECRET`, `ANTHROPIC_API_KEY` from your local `.env.local` and pushes them to Production, Preview, and Development envs on Vercel.
+5. Generates a fresh `AUTH_SECRET` for production (does **not** reuse the dev secret).
+6. Deploys to production.
+7. Prints the production URL and the exact domain you need to paste into Strava.
+
+After the first run, just use `npm run deploy` for subsequent deploys (skips the env-var step).
+
+To rotate the production `AUTH_SECRET`: `npm run deploy:rotate-secret`.
+
+**Required Strava-side step after the first deploy:** copy the printed Vercel hostname into the **Authorization Callback Domain** field at https://www.strava.com/settings/api → your app. Save. Then sign-in will work.
+
 ## Design system
 
 - **Display type**: Bricolage Grotesque (variable axes for editorial weight)

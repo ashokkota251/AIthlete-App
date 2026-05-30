@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "deploy:setup": "powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1 -Setup",
+    "deploy": "powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1",
+    "deploy:rotate-secret": "powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1 -Setup -Rotate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
