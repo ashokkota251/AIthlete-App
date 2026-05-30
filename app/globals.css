@@ -1,0 +1,220 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Onest:wght@300..800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+  --font-body: "Onest", system-ui, -apple-system, sans-serif;
+
+  --app-max: 480px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  @apply bg-cream text-ink-900 antialiased;
+  font-family: var(--font-body);
+  font-feature-settings: "ss01", "cv11";
+  /* warm gradient mesh layered behind everything */
+  background-image:
+    radial-gradient(60% 50% at 100% 0%, rgba(255, 138, 77, 0.16), transparent 70%),
+    radial-gradient(50% 40% at 0% 100%, rgba(242, 84, 27, 0.08), transparent 70%),
+    radial-gradient(40% 35% at 50% 50%, rgba(255, 200, 168, 0.08), transparent 70%);
+  background-attachment: fixed;
+}
+
+/* Subtle film grain over the page */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0.12 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Display utility */
+.font-display {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 64, "wdth" 95;
+  letter-spacing: -0.02em;
+}
+.font-display-compressed {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "wdth" 82, "wght" 600;
+  letter-spacing: -0.04em;
+}
+.font-display-wide {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "wdth" 100, "wght" 500;
+  letter-spacing: -0.03em;
+}
+
+/* Tabular figures for numbers in stats */
+.nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Editorial small-caps label */
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  @apply text-ink-400;
+}
+
+/* Two-color editorial rule */
+.rule-coral {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    #f2541b 0%,
+    #f2541b 30%,
+    rgba(20, 16, 8, 0.1) 30%,
+    rgba(20, 16, 8, 0.1) 100%
+  );
+}
+
+/* Hide scrollbar but keep scroll */
+.scroll-hidden::-webkit-scrollbar {
+  display: none;
+}
+.scroll-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Pretty focus ring */
+:where(button, a, input, textarea):focus-visible {
+  @apply outline-none ring-2 ring-coral/40 ring-offset-2 ring-offset-cream;
+  border-radius: 8px;
+}
+
+/* Reusable button motifs */
+.btn-pill {
+  @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-pill font-medium text-sm transition-all duration-200;
+}
+.btn-primary {
+  @apply btn-pill text-white shadow-elev hover:brightness-105 active:scale-[0.98];
+  background: linear-gradient(135deg, #ff8a4d 0%, #f2541b 60%, #d8400b 100%);
+}
+.btn-ghost {
+  @apply btn-pill text-ink-700 bg-paper border border-ink-200 hover:border-ink-300;
+}
+.btn-strava {
+  @apply btn-pill text-white;
+  background: #fc4c02;
+}
+
+/* Card surface */
+.card {
+  @apply bg-paper rounded-card shadow-card p-5;
+}
+.card-warm {
+  background: linear-gradient(180deg, #ffffff 0%, #fffcf8 100%);
+  @apply rounded-card shadow-card p-5;
+}
+
+/* Coral hero card */
+.card-coral {
+  @apply rounded-card text-white p-6 relative overflow-hidden shadow-elev;
+  background: linear-gradient(135deg, #ff8a4d 0%, #f2541b 55%, #d8400b 100%);
+}
+.card-coral::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(60% 50% at 100% 0%, rgba(255, 255, 255, 0.18), transparent 60%),
+    radial-gradient(40% 40% at 0% 100%, rgba(255, 255, 255, 0.08), transparent 60%);
+  pointer-events: none;
+}
+
+/* Numbered list dot (editorial 01 02 03) */
+.idx {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "wdth" 80, "wght" 600;
+  letter-spacing: -0.04em;
+  @apply text-coral;
+}
+
+/* Bottom-nav active pill */
+.nav-active-dot {
+  @apply absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-coral;
+}
+
+/* Animation utilities */
+.rise { animation: rise 0.55s cubic-bezier(0.2,0.7,0.2,1) backwards; }
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.11s; }
+.delay-3 { animation-delay: 0.17s; }
+.delay-4 { animation-delay: 0.23s; }
+.delay-5 { animation-delay: 0.29s; }
+.delay-6 { animation-delay: 0.35s; }
+.delay-7 { animation-delay: 0.41s; }
+.delay-8 { animation-delay: 0.47s; }
+
+@keyframes ringFill {
+  to { stroke-dashoffset: var(--ring-target, 0); }
+}
+
+/* === Sign-in / Splash atmospherics === */
+@keyframes logo-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(-0.4deg); }
+}
+@keyframes logo-glow {
+  0%, 100% { box-shadow: 0 24px 60px -16px rgba(242,84,27,0.45), 0 8px 24px -8px rgba(242,84,27,0.25); }
+  50% { box-shadow: 0 30px 80px -16px rgba(242,84,27,0.55), 0 12px 28px -8px rgba(242,84,27,0.30); }
+}
+@keyframes draw-line {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ring-trace {
+  from { stroke-dashoffset: 1168; }
+  to { stroke-dashoffset: 268; }
+}
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes head-pop {
+  0% { opacity: 0; transform: scale(0.2); }
+  60% { opacity: 1; transform: scale(1.18); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes wordmark-reveal {
+  0% { letter-spacing: 0.4em; opacity: 0; filter: blur(8px); }
+  60% { opacity: 1; filter: blur(0); }
+  100% { letter-spacing: -0.03em; opacity: 1; filter: blur(0); }
+}
+@keyframes particle-drift {
+  0% { transform: translate3d(0,100vh,0); opacity: 0; }
+  10% { opacity: 0.9; }
+  90% { opacity: 0.7; }
+  100% { transform: translate3d(20px,-12vh,0); opacity: 0; }
+}
+@keyframes splash-bg-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Ensure recharts SVG inherits clean colours */
+.recharts-cartesian-axis-line, .recharts-cartesian-axis-tick-line { stroke: transparent !important; }
+.recharts-text { font-family: var(--font-body); fill: #7C7F8E; font-size: 10px; letter-spacing: 0.05em; }
+.recharts-tooltip-wrapper { outline: none; }
