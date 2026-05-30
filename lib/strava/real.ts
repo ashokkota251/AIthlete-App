@@ -15,14 +15,22 @@ import type {
 export class RealStravaProvider implements StravaProvider {
   constructor(private accessToken: string) {}
 
-  async getRecentActivities(_userId: string, limit: number): Promise<Activity[]> {
+  async getRecentActivities(
+    _userId: string,
+    limit: number,
+    page: number = 1,
+  ): Promise<Activity[]> {
     const url = new URL("https://www.strava.com/api/v3/athlete/activities");
-    url.searchParams.set("per_page", String(Math.min(Math.max(1, limit), 30)));
+    const perPage = Math.min(Math.max(1, limit), 30);
+    const pg = Math.max(1, Math.floor(page));
+    url.searchParams.set("per_page", String(perPage));
+    url.searchParams.set("page", String(pg));
 
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${this.accessToken}` },
-      // Strava activities update infrequently — cache briefly to avoid blowing the rate limit.
-      next: { revalidate: 60 },
+      // Strava activities update infrequently — cache the first page briefly
+      // (refresh re-fetches with `cache: "no-store"` via the API route).
+      next: { revalidate: pg === 1 ? 60 : 300 },
     });
 
     if (!res.ok) {

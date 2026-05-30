@@ -44,6 +44,12 @@ export interface AthleteProfile {
 }
 
 export interface StravaProvider {
-  getRecentActivities(userId: string, limit: number): Promise<Activity[]>;
+  /**
+   * @param userId  the Strava athlete id (kept for symmetry; the real client
+   *                uses the bearer token rather than this id)
+   * @param limit   how many activities to fetch per page (1..30)
+   * @param page    1-based page index; defaults to 1
+   */
+  getRecentActivities(userId: string, limit: number, page?: number): Promise<Activity[]>;
   getAthleteProfile(userId: string): Promise<AthleteProfile>;
 }

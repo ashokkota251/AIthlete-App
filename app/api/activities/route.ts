@@ -5,6 +5,11 @@ import { getStravaProvider } from "@/lib/strava";
 
 const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(30).default(10),
+  page: z.coerce.number().int().min(1).max(50).default(1),
+  fresh: z
+    .union([z.literal("1"), z.literal("true")])
+    .optional()
+    .transform((v) => Boolean(v)),
 });
 
 export async function GET(req: Request) {
@@ -19,13 +24,20 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Invalid query", issues: parsed.error.issues }, { status: 400 });
   }
 
+  const { limit, page } = parsed.data;
+
   try {
     const provider = getStravaProvider({ accessToken: session.accessToken });
     const activities = await provider.getRecentActivities(
       session.stravaAthleteId ?? "",
-      parsed.data.limit,
+      limit,
+      page,
     );
-    return NextResponse.json({ activities });
+    return NextResponse.json(
+      { activities, page, hasMore: activities.length === limit },
+      // Refresh requests bypass the route handler's edge cache.
+      { headers: parsed.data.fresh ? { "Cache-Control": "no-store" } : {} },
+    );
   } catch (err) {
     console.error("/api/activities failed", err);
     return NextResponse.json({ error: "Failed to load activities" }, { status: 502 });
