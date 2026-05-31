@@ -3,7 +3,7 @@ import { getStravaProvider } from "@/lib/strava";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { SignOutButton } from "@/components/sign-out-button";
-import { formatKm, formatDuration } from "@/lib/format";
+import { formatKm } from "@/lib/format";
 import { Settings, Bell, Ruler, Shield, ChevronRight, Link2 } from "lucide-react";
 
 export default async function ProfilePage() {
@@ -26,6 +26,11 @@ export default async function ProfilePage() {
   const totalKm = monthActivities.reduce((s, a) => s + a.distance / 1000, 0);
   const totalSec = monthActivities.reduce((s, a) => s + a.movingTime, 0);
   const totalElev = monthActivities.reduce((s, a) => s + a.totalElevationGain, 0);
+  const hours = Math.floor(totalSec / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const timeValue =
+    hours > 0 ? `${hours}:${String(minutes).padStart(2, "0")}` : String(minutes);
+  const timeUnit = hours > 0 ? "h" : "min";
   const initials = `${athlete.firstName[0] ?? ""}${athlete.lastName[0] ?? ""}`;
   const joined = athlete.joinedAt ? new Date(athlete.joinedAt).getFullYear() : "—";
   const monthLabel = now.toLocaleDateString("en-US", { month: "long" });
@@ -53,9 +58,13 @@ export default async function ProfilePage() {
         </div>
         <Card className="!p-0 overflow-hidden">
           <div className="grid grid-cols-3 divide-x divide-ink-100">
-            <Block value={formatKm(totalKm * 1000, 1).replace(" km", "")} unit="km" label="Distance" />
-            <Block value={formatDuration(totalSec)} label="Moving" />
-            <Block value={`${Math.round(totalElev)}m`} label="Elevation" />
+            <Block
+              value={formatKm(totalKm * 1000, 1).replace(" km", "")}
+              unit="km"
+              label="Distance"
+            />
+            <Block value={timeValue} unit={timeUnit} label="Moving" />
+            <Block value={String(Math.round(totalElev))} unit="m" label="Elevation" />
           </div>
         </Card>
       </section>
@@ -107,12 +116,16 @@ export default async function ProfilePage() {
 
 function Block({ value, unit, label }: { value: string; unit?: string; label: string }) {
   return (
-    <div className="p-4 text-center">
-      <div className="flex items-baseline justify-center gap-0.5 nums">
-        <span className="font-display font-bold tracking-tight text-2xl text-ink-900 leading-none">{value}</span>
-        {unit && <span className="text-[11px] text-ink-400 ml-0.5">{unit}</span>}
+    <div className="py-5 px-3 text-center flex flex-col items-center justify-center gap-2 min-h-[96px]">
+      <div className="flex items-baseline justify-center gap-1 nums leading-none">
+        <span className="font-display font-bold tracking-tight text-[22px] text-ink-900">
+          {value}
+        </span>
+        {unit && (
+          <span className="text-[12px] font-semibold text-ink-400">{unit}</span>
+        )}
       </div>
-      <div className="mt-1 text-[10px] uppercase tracking-widest font-semibold text-ink-400">
+      <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-ink-400">
         {label}
       </div>
     </div>

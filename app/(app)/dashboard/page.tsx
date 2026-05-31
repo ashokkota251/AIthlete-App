@@ -9,6 +9,7 @@ import { TodayCard } from "@/components/dashboard/today-card";
 import { FormLoadCard } from "@/components/dashboard/form-load-card";
 import { RoadToGoalCard } from "@/components/dashboard/road-to-goal-card";
 import { MotivationStrip } from "@/components/dashboard/motivation-strip";
+import { Avatar } from "@/components/ui/avatar";
 import { ArrowUpRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +52,6 @@ export default async function DashboardPage() {
     month: "short",
     day: "numeric",
   });
-  const initial = (firstName[0] ?? "A").toUpperCase();
 
   return (
     <div className="space-y-3.5 pb-4">
@@ -63,16 +63,13 @@ export default async function DashboardPage() {
             Hey, <span className="text-coral">{firstName}</span>
           </div>
         </div>
-        <Link
-          href="/profile"
-          aria-label="Profile"
-          className="size-[46px] rounded-full grid place-items-center font-display font-bold text-white text-[17px] shrink-0 border-2 border-white"
-          style={{
-            background: "linear-gradient(135deg, #FFB78A, #F2541B)",
-            boxShadow: "0 6px 18px -10px rgba(196,66,15,.22)",
-          }}
-        >
-          {initial}
+        <Link href="/profile" aria-label="Profile" className="shrink-0">
+          <Avatar
+            src={athlete.avatarUrl}
+            initials={`${firstName[0] ?? ""}${(athlete.lastName?.[0] ?? "")}`.toUpperCase()}
+            size={46}
+            ring
+          />
         </Link>
       </header>
 

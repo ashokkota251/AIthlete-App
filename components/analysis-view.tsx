@@ -1,9 +1,5 @@
-"use client";
-
-import { useState, useTransition } from "react";
 import { Card, CardCoral, CardSection } from "@/components/ui/card";
-import { RefreshCcw, Check, AlertTriangle, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/cn";
+import { Check, AlertTriangle, ArrowRight } from "lucide-react";
 import type { AnalysisResult } from "@/lib/ai/analysis";
 
 export function AnalysisView({
@@ -13,55 +9,14 @@ export function AnalysisView({
   initial: AnalysisResult;
   initialCount: number;
 }) {
-  const [data, setData] = useState<AnalysisResult>(initial);
-  const [count, setCount] = useState(initialCount);
-  const [pending, start] = useTransition();
-  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
-  const [spinKey, setSpinKey] = useState(0);
-
-  function regenerate() {
-    if (pending) return;
-    setSpinKey((k) => k + 1);
-    start(async () => {
-      const res = await fetch("/api/analysis", { method: "POST" });
-      if (!res.ok) return;
-      const json = (await res.json()) as { analysis: AnalysisResult; count: number };
-      setData(json.analysis);
-      setCount(json.count);
-      setUpdatedAt(new Date());
-    });
-  }
+  const data = initial;
+  const count = initialCount;
 
   return (
     <div className="space-y-5 pb-2">
-      <div className="flex items-center justify-between -mt-1">
-        <div className="text-[11px] text-muted nums">
-          Generated · {count} sessions
-          {data.fallback && <span className="ml-2 text-coral-700">· local mode</span>}
-          {updatedAt && (
-            <span className="ml-2">
-              · refreshed {updatedAt.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          )}
-        </div>
-        <button
-          onClick={regenerate}
-          aria-label="Regenerate analysis"
-          disabled={pending}
-          className={cn(
-            "size-9 grid place-items-center rounded-pill border transition-all shrink-0",
-            pending
-              ? "bg-coral text-white border-coral shadow-[0_6px_16px_-6px_rgba(242,84,27,0.55)]"
-              : "bg-coral-50 text-coral-700 border-coral-100 hover:bg-coral-100",
-          )}
-        >
-          <RefreshCcw
-            key={spinKey}
-            size={14}
-            strokeWidth={2.4}
-            className={cn("transition-transform", pending && "animate-spin")}
-          />
-        </button>
+      <div className="text-[11px] text-muted nums -mt-1">
+        Generated · {count} sessions
+        {data.fallback && <span className="ml-2 text-coral-700">· local mode</span>}
       </div>
 
       {/* Summary — bold coral hero */}

@@ -23,6 +23,42 @@
   --red: #E24B4A;
 }
 
+/* iPad / tablet — widen the column slightly, but keep it phone-style. */
+@media (min-width: 768px) {
+  :root {
+    --app-max: 560px;
+  }
+}
+
+/* Atmospheric background — only visible on tablet+ where the column is
+   centred with breathing room on both sides. On phones the column fills
+   the viewport, so the wash would never show anyway. */
+.app-bg { display: none; }
+
+@media (min-width: 768px) {
+  .app-bg {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(60% 40% at 80% 10%, rgba(255, 138, 61, 0.18), transparent 70%),
+      radial-gradient(50% 40% at 10% 90%, rgba(242, 84, 27, 0.12), transparent 70%),
+      radial-gradient(40% 30% at 100% 100%, rgba(255, 199, 168, 0.18), transparent 70%),
+      var(--bg-cream);
+  }
+  .app-bg::after {
+    /* subtle film grain over the wash — sells the "real paper" feel */
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.35;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0.10 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
 html,
 body {
   height: 100%;
