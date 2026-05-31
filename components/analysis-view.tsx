@@ -13,10 +13,17 @@ export function AnalysisView({
   const count = initialCount;
 
   return (
-    <div className="space-y-5 pb-2">
-      <div className="text-[11px] text-muted nums -mt-1">
-        Generated · {count} sessions
-        {data.fallback && <span className="ml-2 text-coral-700">· local mode</span>}
+    <div className="space-y-5 pb-2 pt-2">
+      <div className="flex items-center gap-2 text-[11px] text-muted nums">
+        <span className="size-1 rounded-full bg-coral/60" aria-hidden />
+        <span className="uppercase tracking-[0.14em] font-semibold">
+          Generated · {count} sessions
+        </span>
+        {data.fallback && (
+          <span className="ml-1 text-coral-700 uppercase tracking-[0.14em] font-semibold">
+            · local mode
+          </span>
+        )}
       </div>
 
       {/* Summary — bold coral hero */}

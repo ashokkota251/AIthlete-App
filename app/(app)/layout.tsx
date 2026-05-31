@@ -11,7 +11,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       className="min-h-[100dvh]"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 88px)" }}
     >
-      <main className="px-5 pt-6">{children}</main>
+      <main className="px-5 pt-6 md:px-8 md:pt-10">
+        <div className="page-shell">{children}</div>
+      </main>
       <BottomNav />
     </div>
   );

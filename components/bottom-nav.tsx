@@ -36,7 +36,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[var(--app-max)] px-3"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[480px] md:max-w-[560px] px-3"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
     >
       <div className="relative flex items-center justify-around gap-1 rounded-[28px] bg-paper/92 backdrop-blur-xl border border-line/80 px-2 py-2 shadow-[0_18px_40px_-18px_rgba(20,16,8,0.18),0_4px_14px_-4px_rgba(20,16,8,0.06)]">
