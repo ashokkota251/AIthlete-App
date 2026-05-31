@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
-import { ANTHROPIC_MODEL, getAnthropic, hasAI } from "@/lib/ai/client";
+import { chat, hasAI } from "@/lib/ai/client";
 import { buildCoachSystemPrompt } from "@/lib/ai/prompts";
 import {
   RED_FLAG_RESPONSE,
@@ -94,31 +94,22 @@ export async function POST(req: Request) {
     });
   }
 
-  const ai = getAnthropic()!;
   const system = buildCoachSystemPrompt(
     { activities, stats, zones },
     recoveryMode ? { recoveryMode: true, stretchCatalogue } : undefined,
   );
 
-  try {
-    const response = await ai.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 800,
-      system,
-      messages: body.messages.map((m) => ({ role: m.role, content: m.content })),
-    });
-    const text = response.content
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n")
-      .trim();
-    return NextResponse.json({ message: text });
-  } catch (err) {
-    console.error("/api/chat failed", err);
-    return NextResponse.json({
-      message: localFallbackReply(lastUserMsg, activities.length),
-      fallback: true,
-    });
-  }
+  const text = await chat({
+    system,
+    messages: body.messages.map((m) => ({ role: m.role, content: m.content })),
+    maxTokens: 800,
+  });
+
+  if (text) return NextResponse.json({ message: text });
+  return NextResponse.json({
+    message: localFallbackReply(lastUserMsg, activities.length),
+    fallback: true,
+  });
 }
 
 function localFallbackReply(userText: string, activityCount: number): string {

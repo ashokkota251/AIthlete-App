@@ -1,5 +1,5 @@
 import type { Activity, AthleteStats, AthleteZones } from "@/lib/strava/types";
-import { ANTHROPIC_MODEL, getAnthropic } from "./client";
+import { chat, hasAI } from "./client";
 import { buildAnalysisMessages, summariseActivities } from "./prompts";
 import {
   acuteChronicRatio,
@@ -53,28 +53,20 @@ export async function generateAnalysis(
   stats?: AthleteStats | null,
   zones?: AthleteZones | null,
 ): Promise<AnalysisResult> {
-  const ai = getAnthropic();
-  if (!ai) return fallbackAnalysis(activities, stats, zones);
+  if (!hasAI()) return fallbackAnalysis(activities, stats, zones);
 
   const { system, user } = buildAnalysisMessages({ activities, stats, zones });
-  try {
-    const response = await ai.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 1024,
-      system,
-      messages: [{ role: "user", content: user }],
-    });
-    const text = response.content
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n")
-      .trim();
+  const text = await chat({
+    system,
+    messages: [{ role: "user", content: user }],
+    maxTokens: 1024,
+    format: "json",
+  });
+  if (text) {
     const parsed = parseAnalysis(text);
     if (parsed) return parsed;
-    return fallbackAnalysis(activities, stats, zones);
-  } catch (err) {
-    console.error("AI analysis failed; falling back.", err);
-    return fallbackAnalysis(activities, stats, zones);
   }
+  return fallbackAnalysis(activities, stats, zones);
 }
 
 export function fallbackAnalysis(

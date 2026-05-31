@@ -171,6 +171,9 @@ export const authConfig: NextAuthConfig = {
       const path = request.nextUrl.pathname;
       const isPublic =
         path === "/signin" ||
+        path === "/terms" ||
+        path === "/privacy" ||
+        path === "/contact" ||
         path.startsWith("/api/auth") ||
         path.startsWith("/_next") ||
         path === "/favicon.ico";

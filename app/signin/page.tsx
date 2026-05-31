@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { SignInButton } from "@/components/strava-signin-button";
@@ -74,6 +75,13 @@ export default async function SignInPage({
             </span>
             <span className="h-px w-8 bg-ink-200" />
           </div>
+          <p className="mt-5 text-[12.5px] leading-relaxed text-ink-600 max-w-[34ch] mx-auto">
+            Train smarter, dodge the injuries, hit the goal you set.
+          </p>
+          <div className="mt-3 inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] font-semibold text-coral-700">
+            <span className="size-1 rounded-full bg-coral" aria-hidden />
+            Free forever · No ads · No tracking
+          </div>
         </div>
       </section>
 
@@ -118,13 +126,33 @@ export default async function SignInPage({
           </SignInButton>
         </div>
 
-        <p className="text-[11px] text-ink-400 text-center leading-relaxed max-w-[36ch] mx-auto">
+        <p className="text-[11px] text-ink-400 text-center leading-relaxed max-w-[40ch] mx-auto">
           By continuing you agree to our{" "}
-          <em className="not-italic underline decoration-dotted underline-offset-2 text-ink-500">
-            terms
-          </em>
+          <Link
+            href="/terms"
+            className="underline decoration-dotted underline-offset-2 text-ink-600 hover:text-coral transition-colors"
+          >
+            Terms
+          </Link>{" "}
+          &amp;{" "}
+          <Link
+            href="/privacy"
+            className="underline decoration-dotted underline-offset-2 text-ink-600 hover:text-coral transition-colors"
+          >
+            Privacy Policy
+          </Link>
           . We never store your Strava data — it stays in your session.
         </p>
+
+        <div className="text-center text-[10px] uppercase tracking-[0.28em] font-semibold text-ink-400">
+          <Link
+            href="/contact"
+            className="hover:text-coral transition-colors inline-flex items-center gap-1.5"
+          >
+            <span className="size-1 rounded-full bg-coral" aria-hidden />
+            Contact the builder
+          </Link>
+        </div>
       </section>
 
       {/* Footer */}
