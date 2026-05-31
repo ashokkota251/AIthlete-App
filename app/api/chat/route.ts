@@ -4,6 +4,14 @@ import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
 import { ANTHROPIC_MODEL, getAnthropic, hasAI } from "@/lib/ai/client";
 import { buildCoachSystemPrompt } from "@/lib/ai/prompts";
+import {
+  RED_FLAG_RESPONSE,
+  STRETCHES,
+  detectArea,
+  hasRedFlag,
+  sportForActivityType,
+  stretchesForArea,
+} from "@/lib/recovery";
 
 const messageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -13,6 +21,17 @@ const messageSchema = z.object({
 const bodySchema = z.object({
   messages: z.array(messageSchema).min(1).max(40),
 });
+
+const PAIN_KEYWORDS = [
+  "pain", "hurt", "hurts", "tight", "tightness", "sore", "soreness",
+  "ache", "aches", "aching", "stiff", "stiffness", "cramp", "knot",
+  "discomfort", "twinge",
+];
+
+function isRecoveryQuestion(text: string): boolean {
+  const lower = text.toLowerCase();
+  return PAIN_KEYWORDS.some((k) => lower.includes(k));
+}
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -27,30 +46,64 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
+  const lastUserMsg = body.messages[body.messages.length - 1].content;
+
+  // Red-flag bypass — never invoke the AI on severe-symptom keywords.
+  if (hasRedFlag(lastUserMsg)) {
+    return NextResponse.json({ message: RED_FLAG_RESPONSE, redFlag: true });
+  }
+
   const provider = getStravaProvider({ accessToken: session.accessToken });
   const athleteId = session.stravaAthleteId ?? "";
 
-  // Fetch in parallel — degrade gracefully if any single one fails.
   const [activities, stats, zones] = await Promise.all([
     provider.getRecentActivities(athleteId, 10),
     provider.getAthleteStats(athleteId).catch(() => null),
     provider.getAthleteZones().catch(() => null),
   ]);
 
+  // Recovery-mode detection — if the user mentions pain/tightness, load
+  // the relevant stretch catalogue subset for the AI to pick from.
+  const recoveryMode = isRecoveryQuestion(lastUserMsg);
+  let stretchCatalogue: unknown[] | undefined;
+  if (recoveryMode) {
+    const area = detectArea(lastUserMsg);
+    const sport = activities[0] ? sportForActivityType(activities[0].type) : "any";
+    const picks = area
+      ? stretchesForArea(area, sport, 8)
+      : // No specific body part mentioned — give the AI a sport-appropriate sample.
+        STRETCHES.filter((s) => s.sportRelevance.includes(sport) || s.sportRelevance.includes("any")).slice(0, 10);
+
+    // Slim each catalogue entry to only the fields the AI needs to pick.
+    stretchCatalogue = picks.map((s) => ({
+      id: s.id,
+      name: s.name,
+      target: s.targetArea,
+      secondary: s.secondaryAreas,
+      durationSec: s.durationSec,
+      sides: s.sides,
+      description: s.description,
+      sports: s.sportRelevance,
+    }));
+  }
+
   if (!hasAI()) {
     return NextResponse.json({
-      message: localFallbackReply(body.messages[body.messages.length - 1].content, activities.length),
+      message: localFallbackReply(lastUserMsg, activities.length),
       fallback: true,
     });
   }
 
   const ai = getAnthropic()!;
-  const system = buildCoachSystemPrompt({ activities, stats, zones });
+  const system = buildCoachSystemPrompt(
+    { activities, stats, zones },
+    recoveryMode ? { recoveryMode: true, stretchCatalogue } : undefined,
+  );
 
   try {
     const response = await ai.messages.create({
       model: ANTHROPIC_MODEL,
-      max_tokens: 600,
+      max_tokens: 800,
       system,
       messages: body.messages.map((m) => ({ role: m.role, content: m.content })),
     });
@@ -62,7 +115,7 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("/api/chat failed", err);
     return NextResponse.json({
-      message: localFallbackReply(body.messages[body.messages.length - 1].content, activities.length),
+      message: localFallbackReply(lastUserMsg, activities.length),
       fallback: true,
     });
   }
@@ -77,6 +130,23 @@ function localFallbackReply(userText: string, activityCount: number): string {
   ];
   if (offTopicKeywords.some((k) => t.includes(k))) {
     return "I'm built to focus on your training — let's keep the conversation on workouts, pacing, recovery, or your plan. What about your training would you like to dig into?";
+  }
+
+  // Recovery-question fallback when no API key is available — pick a few stretches deterministically.
+  if (PAIN_KEYWORDS.some((k) => t.includes(k))) {
+    const area = detectArea(t);
+    const picks = area ? stretchesForArea(area, "any", 3) : STRETCHES.slice(0, 3);
+    const tokens = picks.map((s) => `[STRETCH: ${s.id}]`).join("\n");
+    return [
+      "### Why it's tight",
+      "Normal post-activity tightness in that area. Targeted mobility will help it settle.",
+      "",
+      "### Try these",
+      tokens,
+      "",
+      "### When to see someone",
+      "If it persists past **48 hours**, sharpens, or radiates, see a sports physio.",
+    ].join("\n");
   }
 
   if (t.includes("rest") || t.includes("tired") || t.includes("recover")) {

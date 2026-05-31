@@ -12,11 +12,11 @@ export async function GET(
   }
   const { id } = await params;
   try {
-    const debrief = await buildDebrief({
-      accessToken: session.accessToken,
-      athleteId: session.stravaAthleteId ?? "",
-      activityId: id,
-    });
+    const debrief = await buildDebrief(
+      session.accessToken,
+      session.stravaAthleteId ?? "",
+      id,
+    );
     return NextResponse.json(debrief);
   } catch (err) {
     console.error("/api/activities/[id]/debrief failed", err);

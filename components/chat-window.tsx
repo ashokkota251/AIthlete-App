@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { renderMarkdown } from "@/lib/markdown";
+import { parseCoachMessage } from "@/lib/coach-message";
+import { StretchCard } from "@/components/recovery/stretch-card";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -23,13 +23,47 @@ const SEED_MESSAGES: ChatMessage[] = [
   },
 ];
 
-export function ChatWindow({ athleteFirstName }: { athleteFirstName: string }) {
+interface ChatWindowProps {
+  athleteFirstName: string;
+  /** Server-resolved value of the `?q=` query param — auto-sent on mount when present. */
+  initialQuery?: string;
+}
+
+export function ChatWindow({ athleteFirstName, initialQuery }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(SEED_MESSAGES);
   const [input, setInput] = useState("");
   const [pending, start] = useTransition();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const seededFromUrl = useRef(false);
-  const searchParams = useSearchParams();
+  const seeded = useRef(false);
+
+  const send = useCallback((text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setMessages((prev) => {
+      const next: ChatMessage[] = [...prev, { role: "user", content: trimmed }];
+      start(async () => {
+        try {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: next }),
+          });
+          const json = (await res.json()) as { message: string };
+          setMessages((m) => [...m, { role: "assistant", content: json.message }]);
+        } catch {
+          setMessages((m) => [
+            ...m,
+            {
+              role: "assistant",
+              content: "I lost the connection for a second — try that again?",
+            },
+          ]);
+        }
+      });
+      return next;
+    });
+    setInput("");
+  }, []);
 
   useEffect(() => {
     if (scrollerRef.current) {
@@ -37,43 +71,16 @@ export function ChatWindow({ athleteFirstName }: { athleteFirstName: string }) {
     }
   }, [messages, pending]);
 
-  // Deep-link prefill: /coach?q=... auto-sends the question once.
+  // Deep-link prefill: /coach?q=... auto-sends the question once on mount.
+  // Deferred to a microtask so the setState inside `send` happens after the
+  // current commit, avoiding cascading-render warnings.
   useEffect(() => {
-    if (seededFromUrl.current) return;
-    const q = searchParams?.get("q");
-    if (q && q.trim().length > 0) {
-      seededFromUrl.current = true;
-      send(q);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  function send(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed || pending) return;
-    const next: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
-    setMessages(next);
-    setInput("");
-    start(async () => {
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: next }),
-        });
-        const json = (await res.json()) as { message: string };
-        setMessages((m) => [...m, { role: "assistant", content: json.message }]);
-      } catch {
-        setMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content: "I lost the connection for a second — try that again?",
-          },
-        ]);
-      }
-    });
-  }
+    if (seeded.current) return;
+    if (!initialQuery || initialQuery.trim().length === 0) return;
+    seeded.current = true;
+    const handle = setTimeout(() => send(initialQuery), 0);
+    return () => clearTimeout(handle);
+  }, [initialQuery, send]);
 
   return (
     <div
@@ -187,12 +194,19 @@ function Bubble({
     );
   }
 
+  const segments = parseCoachMessage(content);
+
   return (
     <CoachBubbleShell delay={delay}>
-      <div
-        className="md-coach"
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-      />
+      <div className="md-coach space-y-3">
+        {segments.map((seg, i) =>
+          seg.kind === "markdown" ? (
+            <div key={i} dangerouslySetInnerHTML={{ __html: seg.html }} />
+          ) : (
+            <StretchCard key={i} id={seg.id} />
+          ),
+        )}
+      </div>
     </CoachBubbleShell>
   );
 }

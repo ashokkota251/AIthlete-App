@@ -12,11 +12,11 @@ export async function GET(
   }
   const { id } = await params;
   try {
-    const deep = await buildDeepDive({
-      accessToken: session.accessToken,
-      athleteId: session.stravaAthleteId ?? "",
-      activityId: id,
-    });
+    const deep = await buildDeepDive(
+      session.accessToken,
+      session.stravaAthleteId ?? "",
+      id,
+    );
     return NextResponse.json(deep);
   } catch (err) {
     console.error("/api/activities/[id]/plan failed", err);

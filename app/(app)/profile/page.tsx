@@ -12,14 +12,23 @@ export default async function ProfilePage() {
   const athleteId = session!.stravaAthleteId!;
   const [athlete, activities] = await Promise.all([
     provider.getAthleteProfile(athleteId),
-    provider.getRecentActivities(athleteId, 15),
+    // Pull 30 most recent; we'll filter to this month locally so the
+    // displayed totals match the label "This month".
+    provider.getRecentActivities(athleteId, 30),
   ]);
 
-  const totalKm = activities.reduce((s, a) => s + a.distance / 1000, 0);
-  const totalSec = activities.reduce((s, a) => s + a.movingTime, 0);
-  const totalElev = activities.reduce((s, a) => s + a.totalElevationGain, 0);
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const monthActivities = activities.filter(
+    (a) => new Date(a.startDate).getTime() >= monthStart,
+  );
+
+  const totalKm = monthActivities.reduce((s, a) => s + a.distance / 1000, 0);
+  const totalSec = monthActivities.reduce((s, a) => s + a.movingTime, 0);
+  const totalElev = monthActivities.reduce((s, a) => s + a.totalElevationGain, 0);
   const initials = `${athlete.firstName[0] ?? ""}${athlete.lastName[0] ?? ""}`;
   const joined = athlete.joinedAt ? new Date(athlete.joinedAt).getFullYear() : "—";
+  const monthLabel = now.toLocaleDateString("en-US", { month: "long" });
 
   return (
     <div className="space-y-5 pb-2">
@@ -36,9 +45,12 @@ export default async function ProfilePage() {
         </div>
       </section>
 
-      {/* Lifetime-from-fetched-window stats */}
+      {/* Current month roll-up */}
       <section className="rise delay-1">
-        <div className="eyebrow mb-2 px-1">From your last {activities.length} activities</div>
+        <div className="eyebrow mb-2 px-1">
+          {monthLabel} · {monthActivities.length} session
+          {monthActivities.length === 1 ? "" : "s"}
+        </div>
         <Card className="!p-0 overflow-hidden">
           <div className="grid grid-cols-3 divide-x divide-ink-100">
             <Block value={formatKm(totalKm * 1000, 1).replace(" km", "")} unit="km" label="Distance" />

@@ -204,9 +204,64 @@ Do not answer the off-topic question, do not roleplay around it.
 You are not a doctor — for pain, injury, or medical concerns, recommend seeing
 a professional.`;
 
-export function buildCoachSystemPrompt(ctx: CoachContext): string {
+export const RECOVERY_MODE_RULES = `
+## RECOVERY MODE — this question is about soreness or tightness
+
+The user reports tightness, soreness, or generalised discomfort after an activity.
+The rules below SUPERSEDE the main format rules for this reply.
+
+### Hard constraints
+
+- **Do not invent stretches.** You may only reference stretches whose \`id\`
+  appears in the catalogue provided below.
+- **Do not diagnose.** Don't name a clinical condition. Speak in terms of
+  muscles being tight, not injured.
+- **Always end with the "see a professional" line** — even for normal-sounding
+  tightness.
+
+### Response structure (exact shape)
+
+\`\`\`
+### Why it's tight
+
+One short paragraph grounding it in real numbers from the activity context
+(distance, duration, HR, climb). Bold every number with **two stars**.
+
+### Try these · {N} min total
+
+[STRETCH: id-1]
+[STRETCH: id-2]
+[STRETCH: id-3]
+
+### When to see someone
+
+One sentence. Suggest a sports physio if symptoms persist past **48 hours**
+or escalate to sharp/shooting pain, swelling, or numbness.
+\`\`\`
+
+### Stretch reference syntax
+
+To recommend a stretch, place this on its own line, **exactly** like this:
+
+\`\`\`
+[STRETCH: hip-flexor-lunge]
+\`\`\`
+
+Use only the catalogue ids below. Pick **2 to 3** stretches that match the
+body area the user mentioned. Never write the stretch's name or steps in
+prose — the app renders [STRETCH: id] as a full interactive card.
+`;
+
+export function buildCoachSystemPrompt(
+  ctx: CoachContext,
+  opts?: { recoveryMode?: boolean; stretchCatalogue?: unknown[] },
+): string {
   const json = buildTrainingContext(ctx);
-  return `${COACH_SYSTEM_PROMPT}\n\nTRAINING CONTEXT (JSON):\n${JSON.stringify(json, null, 2)}`;
+  let prompt = `${COACH_SYSTEM_PROMPT}\n\nTRAINING CONTEXT (JSON):\n${JSON.stringify(json, null, 2)}`;
+  if (opts?.recoveryMode) {
+    prompt += `\n\n${RECOVERY_MODE_RULES}\n\nSTRETCH CATALOGUE (allowed ids):\n${JSON.stringify(opts.stretchCatalogue ?? [], null, 2)}`;
+  }
+  return prompt;
 }
 
 export const ANALYSIS_INSTRUCTION = `Analyze this athlete's recent training and respond with ONLY valid JSON, no markdown, no prose, no code fences. Use this schema exactly:
