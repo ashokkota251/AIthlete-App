@@ -40,7 +40,7 @@ export function AnalysisView({
               <span className="ml-2 text-coral-700">· local mode</span>
             )}
           </div>
-          <h1 className="font-display-wide text-[32px] leading-[1] text-ink-900">
+          <h1 className="font-display font-bold tracking-tight text-[32px] leading-[1] text-ink-900">
             Analysis<span className="text-coral">.</span>
           </h1>
         </div>

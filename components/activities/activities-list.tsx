@@ -112,14 +112,7 @@ export function ActivitiesList({ initial, initialHasMore }: Props) {
                 ? `${visible.length} shown · ${activities.length} loaded`
                 : `Last ${visible.length} sessions`}
             </div>
-            <h1
-              className="text-ink-900 text-[32px] leading-[1]"
-              style={{
-                fontFamily: "var(--font-display)",
-                fontVariationSettings: '"opsz" 96, "wdth" 88, "wght" 600',
-                letterSpacing: "-0.03em",
-              }}
-            >
+            <h1 className="font-display text-[32px] font-bold tracking-tight leading-[1]">
               Recent<span className="text-coral">.</span>
             </h1>
           </div>
@@ -274,14 +267,7 @@ function EmptyState({
         <Inbox size={22} strokeWidth={2} />
       </div>
       <div className="space-y-1">
-        <div
-          className="text-ink-900 text-lg leading-none"
-          style={{
-            fontFamily: "var(--font-display)",
-            fontVariationSettings: '"opsz" 64, "wdth" 92, "wght" 600',
-            letterSpacing: "-0.02em",
-          }}
-        >
+        <div className="font-display text-lg font-semibold tracking-tight leading-none">
           {activeFilters ? "Nothing matches that combo" : "No activities yet"}
         </div>
         <p className="text-[12px] text-ink-500 leading-relaxed max-w-[32ch]">

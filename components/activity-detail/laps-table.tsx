@@ -38,7 +38,7 @@ export function LapsTable({ laps, sport }: Props) {
                     : "bg-cream-deep/40 border border-transparent")
                 }
               >
-                <span className="font-display-compressed text-base nums w-6 text-ink-400">
+                <span className="font-display font-bold tracking-tight text-base nums w-6 text-ink-400">
                   {String(lap.lapIndex).padStart(2, "0")}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -58,7 +58,7 @@ export function LapsTable({ laps, sport }: Props) {
                 <div className="text-right shrink-0">
                   <div
                     className={
-                      "font-display-wide text-sm nums leading-none " +
+                      "font-display font-bold tracking-tight text-sm nums leading-none " +
                       (isFastest ? "text-coral" : "text-ink-900")
                     }
                   >

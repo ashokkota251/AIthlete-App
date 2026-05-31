@@ -13,7 +13,7 @@ export function Stat({ label, value, unit, trend, align = "left", className }: S
   return (
     <div className={cn("space-y-1.5", align === "right" && "text-right", className)}>
       <div className="eyebrow">{label}</div>
-      <div className="flex items-baseline gap-1.5 nums font-display-wide text-3xl text-ink-900">
+      <div className="flex items-baseline gap-1.5 nums font-display font-bold tracking-tight text-3xl text-ink-900">
         <span>{value}</span>
         {unit && <span className="text-sm font-medium text-ink-400 tracking-normal">{unit}</span>}
       </div>
@@ -39,7 +39,7 @@ export function MiniStat({
     <div className="space-y-1">
       <div className="text-[10px] uppercase tracking-[0.16em] font-semibold text-ink-400">{label}</div>
       <div className="flex items-baseline gap-1 nums">
-        <span className="font-display-wide text-lg text-ink-900">{value}</span>
+        <span className="font-display font-bold tracking-tight text-lg text-ink-900">{value}</span>
         {unit && <span className="text-[11px] text-ink-400">{unit}</span>}
       </div>
     </div>

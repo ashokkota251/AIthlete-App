@@ -1,4 +1,4 @@
-import type { Activity, ActivityType, AthleteZones, ZoneSet } from "@/lib/strava/types";
+import type { Activity, ActivityType, AthleteZones } from "@/lib/strava/types";
 
 /** Family classification used across dashboard charts. */
 export type SportFamily = "run" | "ride" | "swim" | "strength" | "other";

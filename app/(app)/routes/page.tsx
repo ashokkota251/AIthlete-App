@@ -30,14 +30,7 @@ export default async function RoutesPage() {
             <div className="eyebrow mb-1">{routes.length} saved · plan your next ride</div>
           </div>
         </div>
-        <h1
-          className="mt-2 text-ink-900 text-[32px] leading-[1]"
-          style={{
-            fontFamily: "var(--font-display)",
-            fontVariationSettings: '"opsz" 96, "wdth" 88, "wght" 600',
-            letterSpacing: "-0.03em",
-          }}
-        >
+        <h1 className="mt-2 font-display text-[32px] font-bold tracking-tight leading-[1]">
           Routes<span className="text-coral">.</span>
         </h1>
         <div className="rule-coral mt-4" />
@@ -49,14 +42,7 @@ export default async function RoutesPage() {
             <Map size={18} strokeWidth={2} />
           </span>
           <div>
-            <div
-              className="text-ink-900 text-lg leading-none"
-              style={{
-                fontFamily: "var(--font-display)",
-                fontVariationSettings: '"opsz" 64, "wdth" 92, "wght" 600',
-                letterSpacing: "-0.02em",
-              }}
-            >
+            <div className="font-display text-lg font-semibold tracking-tight leading-none">
               No saved routes yet
             </div>
             <p className="mt-1 text-[12px] text-ink-500 leading-relaxed max-w-[34ch]">
@@ -84,7 +70,7 @@ export default async function RoutesPage() {
                         <Bike size={11} strokeWidth={2.4} />
                       )}
                     </span>
-                    <h3 className="font-display-wide text-[14px] leading-tight text-ink-900 truncate flex-1">
+                    <h3 className="font-display font-bold tracking-tight text-[14px] leading-tight text-ink-900 truncate flex-1">
                       {route.name}
                     </h3>
                   </div>

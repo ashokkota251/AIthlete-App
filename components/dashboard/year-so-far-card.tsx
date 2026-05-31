@@ -1,7 +1,7 @@
 import { CardCoral } from "@/components/ui/card";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import type { AthleteStats } from "@/lib/strava/types";
-import { formatKm, formatDuration } from "@/lib/format";
+import { formatKm } from "@/lib/format";
 import { TrendingUp, Mountain } from "lucide-react";
 
 const ANNUAL_GOAL_KM = 1500;
@@ -16,10 +16,6 @@ export function YearSoFarCard({ stats }: Props) {
     stats.ytdRunTotals.distance +
     stats.ytdSwimTotals.distance;
   const ytdKm = ytdMeters / 1000;
-  const ytdSeconds =
-    stats.ytdRideTotals.movingTime +
-    stats.ytdRunTotals.movingTime +
-    stats.ytdSwimTotals.movingTime;
   const ytdElev =
     stats.ytdRideTotals.elevationGain +
     stats.ytdRunTotals.elevationGain +
@@ -43,7 +39,7 @@ export function YearSoFarCard({ stats }: Props) {
             Year so far · {now.getFullYear()}
           </div>
           <div className="mt-1 flex items-baseline gap-2 nums">
-            <span className="font-display-compressed text-[52px] leading-[0.95]">
+            <span className="font-display font-bold tracking-tight text-[52px] leading-[0.95]">
               {ytdKm.toFixed(0)}
             </span>
             <span className="text-base text-white/80 font-medium">km</span>
@@ -68,7 +64,7 @@ export function YearSoFarCard({ stats }: Props) {
           track="rgba(255,255,255,0.20)"
         >
           <div className="text-center">
-            <div className="font-display-wide text-xl text-white nums leading-none">
+            <div className="font-display font-bold tracking-tight text-xl text-white nums leading-none">
               {Math.round(goalPct * 100)}
               <span className="text-xs ml-px">%</span>
             </div>
@@ -123,7 +119,7 @@ function SportTile({ label, km, count }: { label: string; km: number; count: num
         {label}
       </div>
       <div className="flex items-baseline justify-center gap-0.5 nums">
-        <span className="font-display-wide text-base text-white leading-none">{km.toFixed(0)}</span>
+        <span className="font-display font-bold tracking-tight text-base text-white leading-none">{km.toFixed(0)}</span>
         <span className="text-[10px] text-white/60">km</span>
       </div>
       <div className="text-[10px] text-white/60 nums mt-0.5">{count} sessions</div>

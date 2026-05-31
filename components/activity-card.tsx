@@ -29,7 +29,7 @@ export function ActivityCard({ activity, index = 0 }: { activity: Activity; inde
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <h3 className="font-display-wide text-[15px] leading-tight text-ink-900 truncate flex items-center gap-1.5">
+            <h3 className="font-display font-bold tracking-tight text-[15px] leading-tight text-ink-900 truncate flex items-center gap-1.5">
               <span className="truncate">{activity.name}</span>
               {activity.prCount != null && activity.prCount > 0 && (
                 <span className="inline-flex items-center gap-0.5 text-[9px] uppercase tracking-widest font-semibold text-coral shrink-0">
@@ -108,7 +108,7 @@ function Mini({
   return (
     <div className="space-y-0.5">
       <div className="text-[9px] uppercase tracking-widest font-semibold text-ink-400">{label}</div>
-      <div className={big ? "font-display-wide text-lg nums text-ink-900 leading-none flex items-baseline gap-0.5" : "text-[13px] nums text-ink-700 leading-none"}>
+      <div className={big ? "font-display font-bold tracking-tight text-lg nums text-ink-900 leading-none flex items-baseline gap-0.5" : "text-[13px] nums text-ink-700 leading-none"}>
         <span>{value}</span>
         {unit && <span className="text-[10px] text-ink-400">{unit}</span>}
       </div>

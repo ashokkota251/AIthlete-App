@@ -23,14 +23,7 @@ export default function AppError({
         <AithleteIcon size={88} />
       </div>
 
-      <h1
-        className="text-ink-900 text-3xl leading-none mb-3"
-        style={{
-          fontFamily: "var(--font-display)",
-          fontVariationSettings: '"opsz" 96, "wdth" 90, "wght" 700',
-          letterSpacing: "-0.03em",
-        }}
-      >
+      <h1 className="font-display text-3xl font-bold tracking-tight leading-none mb-3">
         Something went sideways<span className="text-coral">.</span>
       </h1>
 

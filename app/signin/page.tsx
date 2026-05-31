@@ -37,7 +37,7 @@ export default async function SignInPage({
       {errorMessage && (
         <div className="relative z-10 mb-3 rise">
           <div className="rounded-2xl bg-coral-50 border border-coral-200 px-4 py-3 text-[12px] leading-relaxed text-coral-700">
-            <strong className="font-semibold">Strava sign-in didn't complete.</strong>{" "}
+            <strong className="font-semibold">Strava sign-in didn&apos;t complete.</strong>{" "}
             {errorMessage}
           </div>
         </div>
@@ -64,14 +64,7 @@ export default async function SignInPage({
 
         {/* Wordmark + hairline + tagline */}
         <div className="rise delay-2 text-center">
-          <div
-            className="text-ink-900 text-[44px] leading-none"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontVariationSettings: '"opsz" 96, "wdth" 90, "wght" 700',
-              letterSpacing: "-0.04em",
-            }}
-          >
+          <div className="font-display text-[44px] font-bold tracking-tight leading-none">
             AIthlete<span className="text-coral">.</span>
           </div>
           <div className="mt-4 flex items-center justify-center gap-3">

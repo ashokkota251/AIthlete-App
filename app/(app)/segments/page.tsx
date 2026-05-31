@@ -40,14 +40,7 @@ export default async function SegmentsPage() {
             </div>
           </div>
         </div>
-        <h1
-          className="mt-2 text-ink-900 text-[32px] leading-[1]"
-          style={{
-            fontFamily: "var(--font-display)",
-            fontVariationSettings: '"opsz" 96, "wdth" 88, "wght" 600',
-            letterSpacing: "-0.03em",
-          }}
-        >
+        <h1 className="mt-2 font-display text-[32px] font-bold tracking-tight leading-[1]">
           Segments<span className="text-coral">.</span>
         </h1>
         <div className="rule-coral mt-4" />
@@ -59,14 +52,7 @@ export default async function SegmentsPage() {
             <Star size={18} strokeWidth={2} />
           </span>
           <div>
-            <div
-              className="text-ink-900 text-lg leading-none"
-              style={{
-                fontFamily: "var(--font-display)",
-                fontVariationSettings: '"opsz" 64, "wdth" 92, "wght" 600',
-                letterSpacing: "-0.02em",
-              }}
-            >
+            <div className="font-display text-lg font-semibold tracking-tight leading-none">
               No starred segments yet
             </div>
             <p className="mt-1 text-[12px] text-ink-500 leading-relaxed max-w-[34ch]">
@@ -108,7 +94,7 @@ function SegmentRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="font-display-wide text-[15px] leading-tight text-ink-900 truncate">
+          <h3 className="font-display font-bold tracking-tight text-[15px] leading-tight text-ink-900 truncate">
             {segment.name}
           </h3>
           <span className="eyebrow shrink-0">{segment.activityType}</span>
@@ -142,7 +128,7 @@ function SegmentRow({
             <div className="inline-flex items-center gap-1 text-[9px] uppercase tracking-widest font-semibold text-coral leading-none">
               <Trophy size={10} strokeWidth={2.4} /> PR
             </div>
-            <div className="mt-1 font-display-wide text-sm nums text-ink-900 leading-none">
+            <div className="mt-1 font-display font-bold tracking-tight text-sm nums text-ink-900 leading-none">
               {formatDuration(segment.prTime)}
             </div>
             {segment.prDate && (

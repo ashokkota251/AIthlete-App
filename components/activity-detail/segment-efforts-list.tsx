@@ -56,7 +56,7 @@ export function SegmentEffortsList({ efforts }: Props) {
                 </div>
               </div>
               <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
-                <span className="font-display-wide text-sm nums text-ink-900 leading-none">
+                <span className="font-display font-bold tracking-tight text-sm nums text-ink-900 leading-none">
                   {formatDuration(effort.movingTime)}
                 </span>
                 {(effort.prRank || effort.komRank) && (

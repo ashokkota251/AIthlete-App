@@ -23,7 +23,7 @@ export default function GlobalError({
             "radial-gradient(120% 100% at 30% 0%, #FF8A4D 0%, #F2541B 50%, #B23006 100%)",
           color: "white",
           fontFamily:
-            "Onest, system-ui, -apple-system, sans-serif",
+            "var(--font-body), DM Sans, system-ui, -apple-system, sans-serif",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -34,7 +34,7 @@ export default function GlobalError({
       >
         <div
           style={{
-            fontFamily: "Bricolage Grotesque, system-ui, sans-serif",
+            fontFamily: "var(--font-display), Space Grotesk, system-ui, sans-serif",
             fontSize: 40,
             fontWeight: 700,
             letterSpacing: "-0.04em",

@@ -17,14 +17,15 @@ export function SportBalanceDonut({ activities }: Props) {
   const totalSec = dist.reduce((s, d) => s + d.seconds, 0);
   const empty = totalSec === 0;
 
-  // Compute stroke segments (start offset, length).
-  let cursor = 0;
-  const segments = dist.map((d) => {
+  // Pre-compute segment lengths, then derive each segment's offset from the running sum.
+  const segments = dist.reduce<
+    Array<typeof dist[number] & { offset: number; length: number }>
+  >((acc, d) => {
     const length = d.share * CIRC;
-    const offset = cursor;
-    cursor += length;
-    return { ...d, offset, length };
-  });
+    const offset = acc.reduce((sum, s) => sum + s.length, 0);
+    acc.push({ ...d, offset, length });
+    return acc;
+  }, []);
 
   const dominant = segments[0];
 
@@ -80,7 +81,7 @@ export function SportBalanceDonut({ activities }: Props) {
                       Most
                     </div>
                     <div
-                      className="font-display-wide text-xl mt-1 leading-none"
+                      className="font-display font-bold tracking-tight text-xl mt-1 leading-none"
                       style={{ color: SPORT_COLORS[dominant.family] }}
                     >
                       {SPORT_LABELS[dominant.family]}

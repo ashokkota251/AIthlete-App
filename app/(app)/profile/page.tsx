@@ -26,7 +26,7 @@ export default async function ProfilePage() {
       {/* Profile hero */}
       <section className="rise flex flex-col items-center text-center pt-2 pb-1">
         <Avatar src={athlete.avatarUrl} initials={initials} size={88} ring />
-        <h1 className="mt-4 font-display-wide text-2xl text-ink-900 leading-none">
+        <h1 className="mt-4 font-display font-bold tracking-tight text-2xl text-ink-900 leading-none">
           {athlete.firstName} {athlete.lastName}
         </h1>
         <div className="mt-1.5 text-[12px] text-ink-500 flex items-center gap-1.5 nums">
@@ -97,7 +97,7 @@ function Block({ value, unit, label }: { value: string; unit?: string; label: st
   return (
     <div className="p-4 text-center">
       <div className="flex items-baseline justify-center gap-0.5 nums">
-        <span className="font-display-compressed text-2xl text-ink-900 leading-none">{value}</span>
+        <span className="font-display font-bold tracking-tight text-2xl text-ink-900 leading-none">{value}</span>
         {unit && <span className="text-[11px] text-ink-400 ml-0.5">{unit}</span>}
       </div>
       <div className="mt-1 text-[10px] uppercase tracking-widest font-semibold text-ink-400">

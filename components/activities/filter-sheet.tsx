@@ -20,12 +20,13 @@ interface Props {
 }
 
 export function FilterSheet({ open, onClose, filters, onApply, resultCount }: Props) {
-  // Local draft so changes only apply on Apply click.
+  // Track the prior `open` to detect transitions in-render — avoids a setState-in-effect.
+  const [prevOpen, setPrevOpen] = useState(open);
   const [draft, setDraft] = useState<ActivityFilters>(filters);
-
-  useEffect(() => {
+  if (prevOpen !== open) {
+    setPrevOpen(open);
     if (open) setDraft(filters);
-  }, [open, filters]);
+  }
 
   // Lock body scroll while open.
   useEffect(() => {
@@ -87,14 +88,7 @@ export function FilterSheet({ open, onClose, filters, onApply, resultCount }: Pr
         <header className="flex items-center justify-between px-5 pt-3 pb-1">
           <div>
             <div className="eyebrow">Refine</div>
-            <h2
-              className="text-ink-900 text-2xl leading-none mt-1"
-              style={{
-                fontFamily: "var(--font-display)",
-                fontVariationSettings: '"opsz" 96, "wdth" 90, "wght" 600',
-                letterSpacing: "-0.03em",
-              }}
-            >
+            <h2 className="font-display text-2xl font-bold tracking-tight leading-none mt-1">
               Filter &amp; sort<span className="text-coral">.</span>
             </h2>
           </div>

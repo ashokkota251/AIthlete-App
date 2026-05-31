@@ -1,21 +1,15 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
-import { Card, CardCoral, CardSection } from "@/components/ui/card";
-import { Avatar } from "@/components/ui/avatar";
-import { ProgressRing } from "@/components/ui/progress-ring";
-import { WeeklyChart } from "@/components/charts/weekly-chart";
-import { ActivityIcon } from "@/components/activity-icon";
-import { buildWeekStats } from "@/components/dashboard-stats";
-import { YearSoFarCard } from "@/components/dashboard/year-so-far-card";
-import { LoadTrendCard } from "@/components/dashboard/load-trend-card";
-import { SportBalanceDonut } from "@/components/dashboard/sport-balance-donut";
-import { ZonesCard } from "@/components/dashboard/zones-card";
-import { PrTimelineCard } from "@/components/dashboard/pr-timeline-card";
-import { formatKm, formatDuration, formatDateShort } from "@/lib/format";
-import { ArrowUpRight, TrendingUp, TrendingDown, Flame, Mountain, Map, Star } from "lucide-react";
-
-const WEEKLY_GOAL_KM = 50;
+import { computeMetrics } from "@/lib/metrics/compute";
+import { fallbackDebrief } from "@/lib/ai/debrief-prompts";
+import { acuteChronicRatio } from "@/lib/training";
+import { LatestDebriefHero } from "@/components/dashboard/latest-debrief-hero";
+import { TodayCard } from "@/components/dashboard/today-card";
+import { FormLoadCard } from "@/components/dashboard/form-load-card";
+import { RoadToGoalCard } from "@/components/dashboard/road-to-goal-card";
+import { MotivationStrip } from "@/components/dashboard/motivation-strip";
+import { ArrowUpRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -24,249 +18,105 @@ export default async function DashboardPage() {
   const provider = getStravaProvider({ accessToken: session!.accessToken! });
   const athleteId = session!.stravaAthleteId!;
 
-  // Fetch everything in parallel. Anything optional degrades gracefully.
-  const [activities, athlete, stats, zones] = await Promise.all([
+  const [activities, athlete, stats] = await Promise.all([
     provider.getRecentActivities(athleteId, 30),
     provider.getAthleteProfile(athleteId),
     provider.getAthleteStats(athleteId).catch(() => null),
-    provider.getAthleteZones().catch(() => null),
   ]);
 
-  const weekStats = buildWeekStats(activities);
-  const goalPct = Math.min(1, weekStats.totalKm / WEEKLY_GOAL_KM);
-  const initials = `${athlete.firstName[0] ?? ""}${athlete.lastName[0] ?? ""}`;
-  const today = activities[0] ? new Date(activities[0].startDate) : new Date();
+  // Deterministic debrief from list-summary fields only — no extra round-trip.
+  let latestDebrief = null;
+  if (activities[0]) {
+    try {
+      const metrics = computeMetrics({
+        activity: activities[0],
+        athleteFtp: athlete.ftp ?? null,
+      });
+      latestDebrief = {
+        activity: activities[0],
+        metrics,
+        narration: fallbackDebrief(metrics),
+      };
+    } catch {
+      // soft-fail — hide the hero rather than break the dashboard
+    }
+  }
+
+  const acr = acuteChronicRatio(activities);
+
+  const firstName = athlete.firstName || "Athlete";
+  const today = new Date();
   const dateLabel = today.toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
     day: "numeric",
   });
-  const trendUp = weekStats.deltaPct >= 0;
+  const initial = (firstName[0] ?? "A").toUpperCase();
 
   return (
-    <div className="space-y-5 pb-2">
-      {/* Header */}
-      <header className="rise flex items-center justify-between">
+    <div className="space-y-3.5 pb-4">
+      {/* ── greeting ───────────────────────────────────── */}
+      <header className="reveal flex items-center justify-between mt-1 mb-1">
         <div>
-          <div className="eyebrow mb-1">{dateLabel}</div>
-          <h1 className="font-display-wide text-[28px] leading-[1] text-ink-900">
-            Hey, <span className="text-coral">{athlete.firstName}</span>
-          </h1>
+          <div className="eyebrow">{dateLabel}</div>
+          <div className="mt-1 font-display font-bold text-[26px] leading-none">
+            Hey, <span className="text-coral">{firstName}</span>
+          </div>
         </div>
-        <Link href="/profile" aria-label="Profile">
-          <Avatar src={athlete.avatarUrl} initials={initials} size={48} ring />
+        <Link
+          href="/profile"
+          aria-label="Profile"
+          className="size-[46px] rounded-full grid place-items-center font-display font-bold text-white text-[17px] shrink-0 border-2 border-white"
+          style={{
+            background: "linear-gradient(135deg, #FFB78A, #F2541B)",
+            boxShadow: "0 6px 18px -10px rgba(196,66,15,.22)",
+          }}
+        >
+          {initial}
         </Link>
       </header>
 
-      {/* This-week hero */}
-      <CardCoral className="rise delay-1">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/70">
-              This Week
-            </div>
-            <div className="mt-1 flex items-baseline gap-2 nums">
-              <span className="font-display-compressed text-[56px] leading-[0.95]">
-                {weekStats.totalKm.toFixed(1)}
-              </span>
-              <span className="text-base text-white/80 font-medium">km</span>
-            </div>
-            <div className="mt-1 flex items-center gap-1.5 text-[12px] text-white/90">
-              {trendUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-              <span className="nums font-medium">
-                {trendUp ? "+" : ""}
-                {weekStats.deltaPct.toFixed(1)}%
-              </span>
-              <span className="text-white/70">vs last week</span>
-            </div>
-          </div>
-
-          <div className="relative">
-            <ProgressRing
-              value={goalPct}
-              size={88}
-              strokeWidth={7}
-              animateDelay={180}
-              track="rgba(255,255,255,0.20)"
-            >
-              <div className="text-center">
-                <div className="font-display-wide text-xl text-white nums leading-none">
-                  {Math.round(goalPct * 100)}
-                  <span className="text-xs ml-px">%</span>
-                </div>
-                <div className="text-[9px] uppercase tracking-widest text-white/70 mt-1">goal</div>
-              </div>
-            </ProgressRing>
-          </div>
-        </div>
-
-        <div className="mt-5 pt-4 border-t border-white/20 grid grid-cols-3 gap-2">
-          <Inline value={String(weekStats.count)} label="sessions" />
-          <Inline value={formatDuration(weekStats.totalSeconds)} label="moving" />
-          <Inline value={`${Math.round(weekStats.totalElevation)}m`} label="elev" />
-        </div>
-      </CardCoral>
-
-      {/* Year so far (Phase A1) */}
-      {stats && <YearSoFarCard stats={stats} />}
-
-      {/* Weekly chart */}
-      <Card className="rise delay-2">
-        <CardSection
-          label="Weekly Activity"
-          trailing={
-            <span className="text-[11px] text-ink-400 nums">
-              Mo – Su · {formatKm(weekStats.totalKm * 1000, 1)}
-            </span>
-          }
-        >
-          <WeeklyChart data={weekStats.perDay} />
-        </CardSection>
-      </Card>
-
-      {/* Training load (Phase A2) */}
-      <LoadTrendCard activities={activities} />
-
-      {/* Time in zone (Phase B1) */}
-      <ZonesCard activities={activities} zones={zones} />
-
-      {/* Sport balance (Phase A3) */}
-      <SportBalanceDonut activities={activities} />
-
-      {/* PR timeline (Phase B3) */}
-      <PrTimelineCard activities={activities} />
-
-      {/* Two-up: streak + longest */}
-      <div className="grid grid-cols-2 gap-3 rise delay-3">
-        <Card className="!p-4 flex flex-col gap-3">
-          <div className="eyebrow flex items-center gap-1.5">
-            <Flame size={11} className="text-coral" /> Streak
-          </div>
-          <div className="flex items-baseline gap-1 nums">
-            <span className="font-display-compressed text-4xl leading-none">{weekStats.count >= 5 ? "12" : "6"}</span>
-            <span className="text-xs text-ink-400">days</span>
-          </div>
-          <div className="text-[11px] text-ink-500 leading-snug">
-            One short day before resetting. Light run keeps it alive.
-          </div>
-        </Card>
-
-        <Card className="!p-4 flex flex-col gap-3">
-          <div className="eyebrow">Longest</div>
-          {weekStats.longest ? (
-            <>
-              <div className="flex items-baseline gap-1 nums">
-                <span className="font-display-compressed text-4xl leading-none">
-                  {(weekStats.longest.distance / 1000).toFixed(1)}
-                </span>
-                <span className="text-xs text-ink-400">km</span>
-              </div>
-              <div className="text-[11px] text-ink-500 leading-snug flex items-center gap-1">
-                <ActivityIcon type={weekStats.longest.type} size={12} />
-                <span className="truncate">{weekStats.longest.name}</span>
-              </div>
-            </>
-          ) : (
-            <div className="text-xs text-ink-400">No activities this week.</div>
-          )}
-        </Card>
-      </div>
-
-      {/* Most active day */}
-      {weekStats.mostActiveDay && weekStats.mostActiveDay.activity && (
-        <Card className="rise delay-4 flex items-center justify-between">
-          <div>
-            <div className="eyebrow mb-1">Most Active Day</div>
-            <div className="flex items-baseline gap-2 nums">
-              <span className="font-display-wide text-2xl text-ink-900">
-                {weekStats.mostActiveDay.day === "Mo" ? "Monday" :
-                 weekStats.mostActiveDay.day === "Tu" ? "Tuesday" :
-                 weekStats.mostActiveDay.day === "We" ? "Wednesday" :
-                 weekStats.mostActiveDay.day === "Th" ? "Thursday" :
-                 weekStats.mostActiveDay.day === "Fr" ? "Friday" :
-                 weekStats.mostActiveDay.day === "Sa" ? "Saturday" : "Sunday"}
-              </span>
-              <span className="text-xs text-ink-400">·</span>
-              <span className="text-xs text-ink-500">{formatDateShort(weekStats.mostActiveDay.activity.startDate)}</span>
-            </div>
-            <div className="mt-1 flex items-center gap-2 text-[12px] text-ink-500">
-              <ActivityIcon type={weekStats.mostActiveDay.activity.type} size={13} className="text-coral" />
-              <span className="truncate">{weekStats.mostActiveDay.activity.name}</span>
-              <span className="text-ink-300">·</span>
-              <span className="nums">{(weekStats.mostActiveDay.km).toFixed(1)} km</span>
-            </div>
-          </div>
-          <div className="w-14 h-14 rounded-2xl bg-coral-50 grid place-items-center">
-            <span className="font-display-compressed text-2xl text-coral leading-none">
-              {Math.round(weekStats.mostActiveDay.km)}
-            </span>
-          </div>
-        </Card>
+      {/* ── 1 · latest debrief hero ────────────────────── */}
+      {latestDebrief && (
+        <LatestDebriefHero
+          activityId={latestDebrief.activity.id}
+          activityName={latestDebrief.activity.name}
+          startDate={latestDebrief.activity.startDate}
+          prCount={latestDebrief.activity.prCount}
+          metrics={latestDebrief.metrics}
+          narration={latestDebrief.narration}
+        />
       )}
 
-      {/* Segments + Routes link cards (Phase C1 + C2) */}
-      <div className="grid grid-cols-2 gap-3 rise delay-5">
-        <Link href="/segments" className="block">
-          <Card className="!p-4 h-full flex flex-col gap-2 hover:shadow-elev hover:border-coral-100 border border-transparent transition-all">
-            <span className="size-9 rounded-xl bg-coral-50 grid place-items-center text-coral">
-              <Star size={15} strokeWidth={2.2} />
-            </span>
-            <div className="mt-auto">
-              <div className="eyebrow !text-coral">Segments</div>
-              <div className="font-display-wide text-[15px] text-ink-900 mt-0.5">
-                Your benchmarks
-              </div>
-              <div className="text-[11px] text-ink-500 mt-0.5">
-                Track PRs on starred segments →
-              </div>
-            </div>
-          </Card>
-        </Link>
+      {/* ── 2 · today's call ───────────────────────────── */}
+      <TodayCard band={acr.band} acrRatio={acr.ratio} readiness="moderate" />
 
-        <Link href="/routes" className="block">
-          <Card className="!p-4 h-full flex flex-col gap-2 hover:shadow-elev hover:border-coral-100 border border-transparent transition-all">
-            <span className="size-9 rounded-xl bg-coral-50 grid place-items-center text-coral">
-              <Map size={15} strokeWidth={2.2} />
-            </span>
-            <div className="mt-auto">
-              <div className="eyebrow !text-coral">Routes</div>
-              <div className="font-display-wide text-[15px] text-ink-900 mt-0.5">
-                Saved + GPX
-              </div>
-              <div className="text-[11px] text-ink-500 mt-0.5">
-                Export to your watch →
-              </div>
-            </div>
-          </Card>
-        </Link>
-      </div>
+      {/* ── 3 · form & load ────────────────────────────── */}
+      <FormLoadCard activities={activities} />
 
-      {/* CTA card → Analysis */}
-      <Link href="/analysis" className="block rise delay-6">
-        <Card className="flex items-center justify-between hover:shadow-elev transition-shadow group">
+      {/* ── 4 · road to goal ───────────────────────────── */}
+      <RoadToGoalCard stats={stats} />
+
+      {/* ── 5 · motivation strip ───────────────────────── */}
+      <MotivationStrip activities={activities} />
+
+      {/* ── CTA to weekly analysis ─────────────────────── */}
+      <Link href="/analysis" className="block reveal delay-6">
+        <div className="card flex items-center justify-between hover:shadow-elev transition-shadow group">
           <div>
-            <div className="eyebrow mb-1 text-coral">Weekly Intelligence</div>
-            <div className="font-display-wide text-lg text-ink-900 leading-tight">
-              Read your AI analysis of these {Math.min(activities.length, 10)} sessions
+            <div className="eyebrow text-coral">Weekly intelligence</div>
+            <div className="mt-1 font-display font-bold text-[17px] text-ink leading-tight">
+              Read the AI analysis of your last 10 sessions
             </div>
-            <div className="text-[12px] text-ink-500 mt-1">
+            <div className="mt-1 text-[12px] text-muted">
               Summary · highlights · what to fix · what to do next
             </div>
           </div>
-          <div className="size-10 rounded-full bg-coral text-white grid place-items-center group-hover:scale-105 transition-transform shadow-glow">
+          <span className="size-10 rounded-full bg-coral text-white grid place-items-center shadow-glow group-hover:scale-105 transition-transform">
             <ArrowUpRight size={18} strokeWidth={2.4} />
-          </div>
-        </Card>
+          </span>
+        </div>
       </Link>
-    </div>
-  );
-}
-
-function Inline({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="text-center">
-      <div className="font-display-wide text-base text-white nums leading-none">{value}</div>
-      <div className="text-[9px] uppercase tracking-widest text-white/70 mt-1">{label}</div>
     </div>
   );
 }

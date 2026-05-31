@@ -119,7 +119,7 @@ export const authConfig: NextAuthConfig = {
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 30 },
   pages: { signIn: "/signin", error: "/signin" },
   trustHost: true,
-  debug: process.env.NODE_ENV !== "production",
+  debug: false,
 
   callbacks: {
     async jwt({ token, account, profile }) {
@@ -179,14 +179,6 @@ export const authConfig: NextAuthConfig = {
     },
   },
 
-  events: {
-    async signIn({ user, account }) {
-      console.log("[auth/event] signIn", { provider: account?.provider, userId: user?.id });
-    },
-    async signOut() {
-      console.log("[auth/event] signOut");
-    },
-  },
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
