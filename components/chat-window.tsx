@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { parseCoachMessage } from "@/lib/coach-message";
@@ -32,37 +32,50 @@ interface ChatWindowProps {
 export function ChatWindow({ athleteFirstName, initialQuery }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(SEED_MESSAGES);
   const [input, setInput] = useState("");
-  const [pending, start] = useTransition();
+  const [pending, setPending] = useState(false);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const seeded = useRef(false);
+  const messagesRef = useRef<ChatMessage[]>(SEED_MESSAGES);
 
   const send = useCallback((text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    setMessages((prev) => {
-      const next: ChatMessage[] = [...prev, { role: "user", content: trimmed }];
-      start(async () => {
-        try {
-          const res = await fetch("/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: next }),
-          });
-          const json = (await res.json()) as { message: string };
-          setMessages((m) => [...m, { role: "assistant", content: json.message }]);
-        } catch {
-          setMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content: "I lost the connection for a second — try that again?",
-            },
-          ]);
-        }
-      });
-      return next;
-    });
+    const next: ChatMessage[] = [
+      ...messagesRef.current,
+      { role: "user", content: trimmed },
+    ];
+    messagesRef.current = next;
+    setMessages(next);
     setInput("");
+    setPending(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: next }),
+        });
+        const json = (await res.json()) as { message: string };
+        const after = [
+          ...messagesRef.current,
+          { role: "assistant" as const, content: json.message },
+        ];
+        messagesRef.current = after;
+        setMessages(after);
+      } catch {
+        const after: ChatMessage[] = [
+          ...messagesRef.current,
+          {
+            role: "assistant",
+            content: "I lost the connection for a second — try that again?",
+          },
+        ];
+        messagesRef.current = after;
+        setMessages(after);
+      } finally {
+        setPending(false);
+      }
+    })();
   }, []);
 
   useEffect(() => {

@@ -83,7 +83,12 @@ export function buildTrainingContext(ctx: CoachContext): Record<string, unknown>
 
   const zonePrompt = tiz ? zoneCoachingPrompt(timeInZoneFromAverages(ctx.activities, zoneBins!, 7)) : null;
 
+  const now = new Date();
+  const currentMonthIso = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+
   return {
+    today_iso_date: now.toISOString().slice(0, 10),
+    current_calendar_month: currentMonthIso,
     recent_activities: slim,
     training_load: {
       acute_7d_suffer: Math.round(acr.acute),
@@ -100,7 +105,15 @@ export function buildTrainingContext(ctx: CoachContext): Record<string, unknown>
       : {}),
     ...(ctx.stats
       ? {
-          year_to_date: {
+          totals_last_4_weeks: {
+            run_km: +(ctx.stats.recentRunTotals.distance / 1000).toFixed(1),
+            ride_km: +(ctx.stats.recentRideTotals.distance / 1000).toFixed(1),
+            swim_km: +(ctx.stats.recentSwimTotals.distance / 1000).toFixed(1),
+            run_sessions: ctx.stats.recentRunTotals.count,
+            ride_sessions: ctx.stats.recentRideTotals.count,
+            swim_sessions: ctx.stats.recentSwimTotals.count,
+          },
+          totals_year_to_date: {
             run_km: +(ctx.stats.ytdRunTotals.distance / 1000).toFixed(1),
             ride_km: +(ctx.stats.ytdRideTotals.distance / 1000).toFixed(1),
             swim_km: +(ctx.stats.ytdSwimTotals.distance / 1000).toFixed(1),
@@ -193,6 +206,32 @@ with no sections**. Still bold every number.
 - No long unbroken paragraphs.
 - Reference the athlete's ACR band ("overload", "sweet spot") and
   time-in-zone share when relevant.
+
+### Time-window honesty — do not invent monthly totals
+
+The TRAINING CONTEXT below gives you EXACTLY these time-window totals and
+nothing else:
+
+- \`totals_last_4_weeks\` — rolling 4 weeks ending today
+- \`totals_year_to_date\` — Jan 1 of this year through today
+- \`recent_activities\` — the user's last 10 individual sessions
+- \`sport_balance_31d\` — minutes by sport over the last 31 days
+
+You do NOT have per-calendar-month totals (no "May only", no "March only",
+no "last month" total). If the user asks for a specific calendar month or
+any other window you don't have, you MUST:
+
+1. Say plainly that you don't have that month's total in the data you can see.
+2. Offer the closest window you DO have (last 4 weeks or year-to-date),
+   labelling it correctly.
+3. Optionally sum the matching activities from \`recent_activities\` whose
+   \`date\` falls in that month, but only if every session of that month is
+   present — if it's a partial slice, say so explicitly ("at least **X km**
+   from the **N** sessions I can see in May").
+
+Never present a year-to-date number as the answer to a monthly question.
+Never invent a monthly figure. The \`today_iso_date\` field tells you what
+"this month" means — use it to interpret the user's wording.
 
 ### Off-topic guardrail
 
