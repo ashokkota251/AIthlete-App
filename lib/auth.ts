@@ -1,8 +1,9 @@
 import NextAuth, { type NextAuthConfig } from "next-auth";
-
-const STRAVA_AUTH_URL = "https://www.strava.com/api/v3/oauth/authorize";
-const STRAVA_TOKEN_URL = "https://www.strava.com/api/v3/oauth/token";
-const STRAVA_ATHLETE_URL = "https://www.strava.com/api/v3/athlete";
+import {
+  STRAVA_OAUTH_AUTHORIZE_URL,
+  STRAVA_OAUTH_TOKEN_URL,
+  STRAVA_ATHLETE_URL,
+} from "@/lib/strava/endpoints";
 
 async function refreshStravaToken(refreshToken: string) {
   const body = new URLSearchParams({
@@ -11,7 +12,7 @@ async function refreshStravaToken(refreshToken: string) {
     grant_type: "refresh_token",
     refresh_token: refreshToken,
   });
-  const res = await fetch(STRAVA_TOKEN_URL, {
+  const res = await fetch(STRAVA_OAUTH_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
@@ -41,7 +42,7 @@ const StravaProvider: NextAuthConfig["providers"][number] = {
   name: "Strava",
   type: "oauth",
   authorization: {
-    url: STRAVA_AUTH_URL,
+    url: STRAVA_OAUTH_AUTHORIZE_URL,
     params: {
       // profile:read_all is needed for GET /athlete/zones (time-in-zone panel)
       scope: "read,activity:read_all,profile:read_all",
@@ -50,7 +51,7 @@ const StravaProvider: NextAuthConfig["providers"][number] = {
     },
   },
   token: {
-    url: STRAVA_TOKEN_URL,
+    url: STRAVA_OAUTH_TOKEN_URL,
     async conform(response: Response): Promise<Response> {
       const raw = await response.clone().text();
 

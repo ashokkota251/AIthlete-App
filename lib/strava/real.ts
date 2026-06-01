@@ -15,8 +15,7 @@ import type {
   SummarySegment,
   ZoneSet,
 } from "./types";
-
-const API_BASE = "https://www.strava.com/api/v3";
+import { STRAVA_API_BASE, stravaPaths } from "./endpoints";
 
 /**
  * Real Strava REST API provider.
@@ -27,12 +26,21 @@ export class RealStravaProvider implements StravaProvider {
 
   /* ----------------------------- private helpers ---------------------------- */
   private async req(path: string, init?: { revalidate?: number; cache?: RequestCache }): Promise<Response> {
-    const res = await fetch(`${API_BASE}${path}`, {
-      headers: { Authorization: `Bearer ${this.accessToken}` },
-      ...(init?.cache
-        ? { cache: init.cache }
-        : { next: { revalidate: init?.revalidate ?? 60 } }),
-    });
+    const fetchOnce = () =>
+      fetch(`${STRAVA_API_BASE}${path}`, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+        ...(init?.cache
+          ? { cache: init.cache }
+          : { next: { revalidate: init?.revalidate ?? 60 } }),
+      });
+
+    let res = await fetchOnce();
+    // Single retry for transient Strava failures: 5xx (their bad day) and 429
+    // (rate-limit window flip). One sleep, then bubble up.
+    if (!res.ok && (res.status >= 500 || res.status === 429)) {
+      await new Promise((r) => setTimeout(r, res.status === 429 ? 1500 : 400));
+      res = await fetchOnce();
+    }
     if (!res.ok) {
       throw new Error(`Strava ${path} ${res.status}`);
     }
@@ -48,7 +56,7 @@ export class RealStravaProvider implements StravaProvider {
     const perPage = Math.min(Math.max(1, limit), 30);
     const pg = Math.max(1, Math.floor(page));
     const res = await this.req(
-      `/athlete/activities?per_page=${perPage}&page=${pg}`,
+      `${stravaPaths.athleteActivities}?per_page=${perPage}&page=${pg}`,
       { revalidate: pg === 1 ? 60 : 300 },
     );
     const raw = (await res.json()) as StravaActivityDTO[];
@@ -56,7 +64,7 @@ export class RealStravaProvider implements StravaProvider {
   }
 
   async getActivity(id: string | number): Promise<DetailedActivity> {
-    const res = await this.req(`/activities/${id}?include_all_efforts=true`, {
+    const res = await this.req(`${stravaPaths.activity(id)}?include_all_efforts=true`, {
       revalidate: 300,
     });
     const raw = (await res.json()) as StravaDetailedActivityDTO;
@@ -66,7 +74,7 @@ export class RealStravaProvider implements StravaProvider {
   async getActivityStreams(id: string | number, keys: string[]): Promise<StreamSet> {
     const k = keys.join(",");
     const res = await this.req(
-      `/activities/${id}/streams?keys=${encodeURIComponent(k)}&key_by_type=true`,
+      `${stravaPaths.activityStreams(id)}?keys=${encodeURIComponent(k)}&key_by_type=true`,
       { revalidate: 600 },
     );
     const raw = (await res.json()) as Record<string, RawStreamDTO>;
@@ -75,7 +83,7 @@ export class RealStravaProvider implements StravaProvider {
 
   /* --------------------------------- athlete -------------------------------- */
   async getAthleteProfile(_userId: string): Promise<AthleteProfile> {
-    const res = await this.req("/athlete", { revalidate: 300 });
+    const res = await this.req(stravaPaths.athlete, { revalidate: 300 });
     const raw = (await res.json()) as StravaAthleteDTO;
     return {
       id: String(raw.id),
@@ -94,13 +102,13 @@ export class RealStravaProvider implements StravaProvider {
   }
 
   async getAthleteStats(userId: string): Promise<AthleteStats> {
-    const res = await this.req(`/athletes/${userId}/stats`, { revalidate: 300 });
+    const res = await this.req(stravaPaths.athleteStats(userId), { revalidate: 300 });
     const raw = (await res.json()) as StravaStatsDTO;
     return toAthleteStats(raw);
   }
 
   async getAthleteZones(): Promise<AthleteZones> {
-    const res = await this.req("/athlete/zones", { revalidate: 3600 });
+    const res = await this.req(stravaPaths.athleteZones, { revalidate: 3600 });
     const raw = (await res.json()) as unknown;
     return toAthleteZones(raw);
   }
@@ -108,7 +116,7 @@ export class RealStravaProvider implements StravaProvider {
   /* -------------------------------- segments -------------------------------- */
   async getStarredSegments(page = 1, perPage = 20): Promise<SummarySegment[]> {
     const res = await this.req(
-      `/segments/starred?page=${page}&per_page=${perPage}`,
+      `${stravaPaths.segmentsStarred}?page=${page}&per_page=${perPage}`,
       { revalidate: 600 },
     );
     const raw = (await res.json()) as StravaSegmentDTO[];
@@ -121,7 +129,7 @@ export class RealStravaProvider implements StravaProvider {
   ): Promise<SegmentEffortDetail[]> {
     const perPage = opts?.perPage ?? 30;
     const res = await this.req(
-      `/segment_efforts?segment_id=${segmentId}&per_page=${perPage}`,
+      `${stravaPaths.segmentEfforts}?segment_id=${segmentId}&per_page=${perPage}`,
       { revalidate: 600 },
     );
     if (!res.ok) return [];
@@ -148,7 +156,7 @@ export class RealStravaProvider implements StravaProvider {
     perPage = 20,
   ): Promise<Route[]> {
     const res = await this.req(
-      `/athletes/${athleteId}/routes?page=${page}&per_page=${perPage}`,
+      `${stravaPaths.athleteRoutes(athleteId)}?page=${page}&per_page=${perPage}`,
       { revalidate: 600 },
     );
     const raw = (await res.json()) as StravaRouteDTO[];
@@ -156,11 +164,12 @@ export class RealStravaProvider implements StravaProvider {
   }
 
   async exportRouteGpx(routeId: number): Promise<string> {
-    const res = await fetch(`${API_BASE}/routes/${routeId}/export_gpx`, {
+    const path = stravaPaths.routeExportGpx(routeId);
+    const res = await fetch(`${STRAVA_API_BASE}${path}`, {
       headers: { Authorization: `Bearer ${this.accessToken}` },
       cache: "no-store",
     });
-    if (!res.ok) throw new Error(`Strava /routes/${routeId}/export_gpx ${res.status}`);
+    if (!res.ok) throw new Error(`Strava ${path} ${res.status}`);
     return res.text();
   }
 }

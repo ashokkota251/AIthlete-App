@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
-      <body className="font-sans">
+      <body className="font-sans" suppressHydrationWarning>
         {/* Phone: max-w-[480px] column, edge-to-edge on small viewports.
             Tablet+: full-bleed — the app takes the whole iPad/desktop width.
             Inner pages handle their own readable content widths. */}

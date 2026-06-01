@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
+import type { AthleteProfile } from "@/lib/strava/types";
 import { computeMetrics } from "@/lib/metrics/compute";
 import { fallbackDebrief } from "@/lib/ai/debrief-prompts";
 import { acuteChronicRatio } from "@/lib/training";
@@ -10,7 +11,7 @@ import { FormLoadCard } from "@/components/dashboard/form-load-card";
 import { RoadToGoalCard } from "@/components/dashboard/road-to-goal-card";
 import { MotivationStrip } from "@/components/dashboard/motivation-strip";
 import { Avatar } from "@/components/ui/avatar";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, AlertTriangle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +19,23 @@ export default async function DashboardPage() {
   const session = await auth();
   const provider = getStravaProvider({ accessToken: session!.accessToken! });
   const athleteId = session!.stravaAthleteId!;
+  const sessionName = session?.user?.name ?? "Athlete";
 
   const [activities, athlete, stats] = await Promise.all([
-    provider.getRecentActivities(athleteId, 30),
-    provider.getAthleteProfile(athleteId),
+    provider.getRecentActivities(athleteId, 30).catch(() => [] as never[]),
+    provider.getAthleteProfile(athleteId).catch(
+      (): AthleteProfile => ({
+        id: athleteId,
+        stravaAthleteId: athleteId,
+        firstName: sessionName.split(/\s+/)[0] ?? "Athlete",
+        lastName: sessionName.split(/\s+/).slice(1).join(" "),
+        username: "",
+        avatarUrl: session?.user?.image ?? null,
+      }),
+    ),
     provider.getAthleteStats(athleteId).catch(() => null),
   ]);
+  const stravaOffline = activities.length === 0;
 
   // Deterministic debrief from list-summary fields only — no extra round-trip.
   let latestDebrief = null;
@@ -72,6 +84,21 @@ export default async function DashboardPage() {
           />
         </Link>
       </header>
+
+      {stravaOffline && (
+        <div className="reveal flex items-start gap-2.5 rounded-card border border-amber/30 bg-[#FFF4E6] px-3.5 py-3 text-[12.5px] leading-snug text-[#8a6a40]">
+          <AlertTriangle size={16} strokeWidth={2.4} className="text-amber shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-display font-bold text-[13px] text-[#7a5a30]">
+              Strava is unreachable
+            </div>
+            <p className="mt-0.5">
+              We couldn&rsquo;t pull your recent activities just now — usually a
+              transient blip on their end. Refresh in a minute.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── 1 · latest debrief hero ────────────────────── */}
       {latestDebrief && (
