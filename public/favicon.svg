@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><metadata><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><rdf:Description><dc:creator>RealFaviconGenerator</dc:creator><dc:source>https://realfavicongenerator.net</dc:source></rdf:Description></rdf:RDF></metadata><defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F2541B"></stop>
+      <stop offset="1" stop-color="#FF8A4C"></stop>
+    </linearGradient>
+  </defs><rect width="512" height="512" rx="116" fill="url(#bg)"></rect><circle cx="256" cy="256" r="186" fill="none" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="14" stroke-linecap="round" stroke-dasharray="900 268" transform="rotate(-118 256 256)"></circle><g fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 178 L184 372"></path>   <!-- left leg -->
+    <path d="M256 178 L328 372"></path>   <!-- right leg -->
+    <path d="M206 306 L306 306"></path>   <!-- crossbar -->
+  </g><circle cx="256" cy="150" r="27" fill="#FFFFFF"></circle></svg>
