@@ -4,6 +4,7 @@ import {
   STRAVA_OAUTH_TOKEN_URL,
   STRAVA_ATHLETE_URL,
 } from "@/lib/strava/endpoints";
+import { resolveAthleteId } from "@/lib/athlete-id";
 
 async function refreshStravaToken(refreshToken: string) {
   const body = new URLSearchParams({
@@ -102,12 +103,18 @@ const StravaProvider: NextAuthConfig["providers"][number] = {
   client: { token_endpoint_auth_method: "client_secret_post" },
   // PKCE only — Strava's `state` round-trip is unreliable.
   checks: ["pkce"],
-  profile(profile: { id: number | string; firstname?: string; lastname?: string; profile?: string; username?: string }) {
+  profile(profile: { id?: number | string | null; firstname?: string; lastname?: string; profile?: string; username?: string }) {
+    const cleanId = resolveAthleteId(profile.id);
+    if (!cleanId) {
+      // Refuse to mint a session with a poisoned id — propagates upstream as
+      // an auth error rather than silently creating a user with id "undefined".
+      throw new Error("Strava userinfo response missing or invalid `id`");
+    }
     return {
-      id: String(profile.id),
+      id: cleanId,
       name:
         `${profile.firstname ?? ""} ${profile.lastname ?? ""}`.trim() ||
-        `Athlete ${profile.id}`,
+        `Athlete ${cleanId}`,
       email: null,
       image: profile.profile ?? null,
     };
@@ -130,11 +137,26 @@ export const authConfig: NextAuthConfig = {
             | { id?: number | string; username?: string }
             | undefined;
 
-          token.stravaAthleteId = String(p?.id ?? account.providerAccountId ?? "");
+          const cleanId = resolveAthleteId(p?.id ?? account.providerAccountId);
+          // Only set if we have a real id — leaving undefined here is safer than
+          // poisoning the JWT with "undefined", which then propagates everywhere.
+          if (cleanId) token.stravaAthleteId = cleanId;
           token.athleteUsername = p?.username;
           token.accessToken = account.access_token as string | undefined;
           token.refreshToken = account.refresh_token as string | undefined;
           token.expiresAt = account.expires_at as number | undefined;
+        }
+
+        // Self-heal: if stravaAthleteId is missing or poisoned (e.g. JWT minted
+        // before the resolveAthleteId guard existed), recover it from token.sub,
+        // which Auth.js mirrors from the User.id returned by the profile() hook.
+        if (!resolveAthleteId(token.stravaAthleteId)) {
+          const fromSub = resolveAthleteId(token.sub);
+          if (fromSub) token.stravaAthleteId = fromSub;
+          else delete token.stravaAthleteId;
+        }
+
+        if (account?.provider === "strava") {
           return token;
         }
 
@@ -158,12 +180,13 @@ export const authConfig: NextAuthConfig = {
     },
 
     async session({ session, token }) {
-      session.stravaAthleteId = token.stravaAthleteId as string | undefined;
+      const cleanId = resolveAthleteId(token.stravaAthleteId);
+      session.stravaAthleteId = cleanId || undefined;
       session.athleteUsername = token.athleteUsername as string | undefined;
       session.accessToken = token.accessToken as string | undefined;
       session.error = token.error as string | undefined;
-      if (session.user && typeof token.stravaAthleteId === "string") {
-        session.user.id = token.stravaAthleteId;
+      if (session.user && cleanId) {
+        session.user.id = cleanId;
       }
       return session;
     },

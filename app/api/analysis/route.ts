@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
 import { generateAnalysis } from "@/lib/ai/analysis";
+import { resolveAthleteId } from "@/lib/athlete-id";
 
 export async function POST() {
   const session = await auth();
@@ -11,7 +12,7 @@ export async function POST() {
 
   try {
     const provider = getStravaProvider({ accessToken: session.accessToken });
-    const athleteId = session.stravaAthleteId ?? "";
+    const athleteId = resolveAthleteId(session.stravaAthleteId);
     const [activities, stats, zones] = await Promise.all([
       provider.getRecentActivities(athleteId, 10),
       provider.getAthleteStats(athleteId).catch(() => null),

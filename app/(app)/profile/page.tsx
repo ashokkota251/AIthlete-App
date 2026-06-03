@@ -5,11 +5,12 @@ import { Card } from "@/components/ui/card";
 import { SignOutButton } from "@/components/sign-out-button";
 import { formatKm } from "@/lib/format";
 import { Settings, Bell, Ruler, Shield, ChevronRight, Link2 } from "lucide-react";
+import { resolveAthleteId } from "@/lib/athlete-id";
 
 export default async function ProfilePage() {
   const session = await auth();
   const provider = getStravaProvider({ accessToken: session!.accessToken! });
-  const athleteId = session!.stravaAthleteId!;
+  const athleteId = resolveAthleteId(session?.stravaAthleteId);
   const [athlete, activities] = await Promise.all([
     provider.getAthleteProfile(athleteId),
     // Pull 30 most recent; we'll filter to this month locally so the

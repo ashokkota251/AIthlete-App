@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
+import { resolveAthleteId } from "@/lib/athlete-id";
 
 const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(30).default(10),
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
   try {
     const provider = getStravaProvider({ accessToken: session.accessToken });
     const activities = await provider.getRecentActivities(
-      session.stravaAthleteId ?? "",
+      resolveAthleteId(session.stravaAthleteId),
       limit,
       page,
     );

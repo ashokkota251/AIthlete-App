@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
 import { ActivitiesList } from "@/components/activities/activities-list";
+import { resolveAthleteId } from "@/lib/athlete-id";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export default async function ActivitiesPage() {
   const session = await auth();
   const provider = getStravaProvider({ accessToken: session!.accessToken! });
   const activities = await provider.getRecentActivities(
-    session!.stravaAthleteId!,
+    resolveAthleteId(session?.stravaAthleteId),
     INITIAL_LIMIT,
     1,
   );

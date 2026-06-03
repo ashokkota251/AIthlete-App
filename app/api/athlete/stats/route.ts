@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
+import { resolveAthleteId } from "@/lib/athlete-id";
 
 export async function GET() {
   const session = await auth();
@@ -9,7 +10,7 @@ export async function GET() {
   }
   try {
     const provider = getStravaProvider({ accessToken: session.accessToken });
-    const stats = await provider.getAthleteStats(session.stravaAthleteId ?? "");
+    const stats = await provider.getAthleteStats(resolveAthleteId(session.stravaAthleteId));
     return NextResponse.json({ stats });
   } catch (err) {
     console.error("/api/athlete/stats failed", err);

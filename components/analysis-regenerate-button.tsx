@@ -1,17 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { RefreshCcw } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { ANALYSIS_REGENERATE_EVENT } from "./analysis-client";
 
 /**
  * Coral icon-only pill matching the activities-list refresh button.
- * Re-runs the analysis server-side via router.refresh, so the streamed
- * <AnalysisBlock> re-renders with a freshly generated narration.
+ * Dispatches a window event consumed by <AnalysisClient />, which bypasses
+ * the localStorage cache and re-fetches /api/analysis.
  */
 export function AnalysisRegenerateButton() {
-  const router = useRouter();
   const [pending, start] = useTransition();
   const [spinKey, setSpinKey] = useState(0);
 
@@ -19,8 +18,7 @@ export function AnalysisRegenerateButton() {
     if (pending) return;
     setSpinKey((k) => k + 1);
     start(async () => {
-      // Force the server route to re-run (busts the React cache for this RSC tree).
-      router.refresh();
+      window.dispatchEvent(new CustomEvent(ANALYSIS_REGENERATE_EVENT));
       // Hold the spinner for at least one cycle so the press feels real.
       await new Promise((r) => setTimeout(r, 800));
     });

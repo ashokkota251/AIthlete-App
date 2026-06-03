@@ -16,6 +16,7 @@ import type {
   ZoneSet,
 } from "./types";
 import { STRAVA_API_BASE, stravaPaths } from "./endpoints";
+import { resolveAthleteId } from "@/lib/athlete-id";
 
 /**
  * Real Strava REST API provider.
@@ -85,12 +86,16 @@ export class RealStravaProvider implements StravaProvider {
   async getAthleteProfile(_userId: string): Promise<AthleteProfile> {
     const res = await this.req(stravaPaths.athlete, { revalidate: 300 });
     const raw = (await res.json()) as StravaAthleteDTO;
+    const cleanId = resolveAthleteId(raw.id);
+    if (!cleanId) {
+      throw new Error("Strava /athlete response missing `id`");
+    }
     return {
-      id: String(raw.id),
-      stravaAthleteId: String(raw.id),
+      id: cleanId,
+      stravaAthleteId: cleanId,
       firstName: raw.firstname,
       lastName: raw.lastname,
-      username: raw.username ?? `${raw.firstname.toLowerCase()}${raw.id}`,
+      username: raw.username ?? `${raw.firstname.toLowerCase()}${cleanId}`,
       avatarUrl: raw.profile ?? null,
       city: raw.city ?? undefined,
       country: raw.country ?? undefined,

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { RouteMiniMap } from "@/components/route-mini-map";
 import { ArrowLeft, Bike, Footprints, Download, Mountain, Map } from "lucide-react";
 import { formatKm, formatDuration, formatDateShort } from "@/lib/format";
+import { resolveAthleteId } from "@/lib/athlete-id";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export default async function RoutesPage() {
   const session = await auth();
   const provider = getStravaProvider({ accessToken: session!.accessToken! });
   const routes = await provider
-    .getAthleteRoutes(session!.stravaAthleteId!, 1, 30)
+    .getAthleteRoutes(resolveAthleteId(session?.stravaAthleteId), 1, 30)
     .catch(() => []);
 
   return (

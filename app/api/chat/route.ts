@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
 import { chat, hasAI } from "@/lib/ai/client";
+import { resolveAthleteId } from "@/lib/athlete-id";
 import { buildCoachSystemPrompt } from "@/lib/ai/prompts";
 import {
   RED_FLAG_RESPONSE,
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
   }
 
   const provider = getStravaProvider({ accessToken: session.accessToken });
-  const athleteId = session.stravaAthleteId ?? "";
+  const athleteId = resolveAthleteId(session.stravaAthleteId);
 
   const [activities, stats, zones] = await Promise.all([
     provider.getRecentActivities(athleteId, 10),

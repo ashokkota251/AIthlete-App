@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
+import { resolveAthleteId } from "@/lib/athlete-id";
 import type { AthleteProfile } from "@/lib/strava/types";
 import { computeMetrics } from "@/lib/metrics/compute";
 import { fallbackDebrief } from "@/lib/ai/debrief-prompts";
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const session = await auth();
   const provider = getStravaProvider({ accessToken: session!.accessToken! });
-  const athleteId = session!.stravaAthleteId!;
+  const athleteId = resolveAthleteId(session?.stravaAthleteId);
   const sessionName = session?.user?.name ?? "Athlete";
 
   const [activities, athlete, stats] = await Promise.all([

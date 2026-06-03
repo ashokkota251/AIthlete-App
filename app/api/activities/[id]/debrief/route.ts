@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { buildDebrief } from "@/lib/debrief-service";
+import { resolveAthleteId } from "@/lib/athlete-id";
 
 export async function GET(
   _req: Request,
@@ -14,7 +15,7 @@ export async function GET(
   try {
     const debrief = await buildDebrief(
       session.accessToken,
-      session.stravaAthleteId ?? "",
+      resolveAthleteId(session.stravaAthleteId),
       id,
     );
     return NextResponse.json(debrief);
