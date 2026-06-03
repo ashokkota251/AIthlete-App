@@ -4,12 +4,10 @@ import { useEffect, useState } from "react";
 import { Sparkles, ArrowRight, Lightbulb } from "lucide-react";
 import { Skeleton } from "@/components/skeleton";
 import { cn } from "@/lib/cn";
-import { readTodayTip, writeTodayTip } from "@/lib/goals/storage";
 import type { Goal, GoalTip, TipSentiment } from "@/lib/goals/types";
 
 interface Props {
   goal: Goal;
-  athleteId: string;
 }
 
 const SENTIMENT_STYLES: Record<
@@ -22,26 +20,18 @@ const SENTIMENT_STYLES: Record<
   at_risk: { dot: "bg-red-500", chip: "bg-red-50 text-red-700", label: "At risk" },
 };
 
-export function GoalTipSection({ goal, athleteId }: Props) {
+export function GoalTipSection({ goal }: Props) {
   const [tip, setTip] = useState<GoalTip | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const cached = readTodayTip(athleteId, goal.id);
-    if (cached) {
-      // localStorage is browser-only — server can't pre-seed.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTip(cached);
-      return;
-    }
     let cancelled = false;
+    // Set loading on mount — intentional one-time cascade so the skeleton shows
+    // until the fetch resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    fetch(`/api/goals/${goal.id}/tip`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ goal }),
-    })
+    fetch(`/api/goals/${goal.id}/tip`)
       .then((r) => {
         if (!r.ok) throw new Error(`tip ${r.status}`);
         return r.json();
@@ -49,7 +39,6 @@ export function GoalTipSection({ goal, athleteId }: Props) {
       .then((data: { tip: GoalTip }) => {
         if (cancelled) return;
         setTip(data.tip);
-        writeTodayTip(athleteId, goal.id, data.tip);
       })
       .catch((err: Error) => {
         if (cancelled) return;
@@ -62,7 +51,7 @@ export function GoalTipSection({ goal, athleteId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [goal, athleteId]);
+  }, [goal.id]);
 
   if (loading || (!tip && !error)) {
     return (
@@ -88,7 +77,6 @@ export function GoalTipSection({ goal, athleteId }: Props) {
 
   return (
     <div className="mt-4 space-y-3">
-      {/* Sentiment chip + headline */}
       <div>
         <div className="flex items-center gap-2 mb-1.5">
           <span className={cn("size-1.5 rounded-full", styles.dot)} aria-hidden />
@@ -106,10 +94,8 @@ export function GoalTipSection({ goal, athleteId }: Props) {
         </p>
       </div>
 
-      {/* Status sentence */}
       <p className="text-[13px] text-ink-700 leading-relaxed">{tip.status}</p>
 
-      {/* Actions */}
       {tip.actions.length > 0 && (
         <div>
           <div className="eyebrow mb-1.5 flex items-center gap-1.5">
@@ -134,7 +120,6 @@ export function GoalTipSection({ goal, athleteId }: Props) {
         </div>
       )}
 
-      {/* Improve */}
       {tip.improve && (
         <div className="rounded-[10px] bg-cream-deep/60 px-3 py-2.5 flex items-start gap-2">
           <Lightbulb

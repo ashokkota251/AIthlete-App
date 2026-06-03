@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
 import { resolveAthleteId } from "@/lib/athlete-id";
+import { listGoals } from "@/lib/db/goals";
 import type { AthleteProfile } from "@/lib/strava/types";
 import { computeMetrics } from "@/lib/metrics/compute";
 import { fallbackDebrief } from "@/lib/ai/debrief-prompts";
@@ -21,7 +22,7 @@ export default async function DashboardPage() {
   const athleteId = resolveAthleteId(session?.stravaAthleteId);
   const sessionName = session?.user?.name ?? "Athlete";
 
-  const [activities, athlete] = await Promise.all([
+  const [activities, athlete, goals] = await Promise.all([
     provider.getRecentActivities(athleteId, 30).catch(() => [] as never[]),
     provider.getAthleteProfile(athleteId).catch(
       (): AthleteProfile => ({
@@ -33,6 +34,7 @@ export default async function DashboardPage() {
         avatarUrl: session?.user?.image ?? null,
       }),
     ),
+    athleteId ? listGoals(athleteId).catch(() => []) : Promise.resolve([]),
   ]);
   const stravaOffline = activities.length === 0;
 
@@ -115,7 +117,7 @@ export default async function DashboardPage() {
       <TodayCard band={acr.band} acrRatio={acr.ratio} readiness="moderate" />
 
       {/* ── 3 · goals overview ─────────────────────────── */}
-      <GoalsOverviewCard athleteId={athleteId} activities={activities} />
+      <GoalsOverviewCard goals={goals} activities={activities} />
 
       {/* ── 4 · motivation strip ───────────────────────── */}
       <MotivationStrip activities={activities} />

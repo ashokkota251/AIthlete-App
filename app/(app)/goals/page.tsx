@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { getStravaProvider } from "@/lib/strava";
 import { resolveAthleteId } from "@/lib/athlete-id";
 import { GoalsClient } from "@/components/goals/goals-client";
+import { listGoals } from "@/lib/db/goals";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +11,11 @@ export default async function GoalsPage() {
   const session = await auth();
   const athleteId = resolveAthleteId(session?.stravaAthleteId);
   const provider = getStravaProvider({ accessToken: session!.accessToken! });
-  // 50 covers typical goal windows; client computes progress for each goal locally.
-  const activities = await provider.getRecentActivities(athleteId, 50).catch(() => []);
+
+  const [activities, goals] = await Promise.all([
+    provider.getRecentActivities(athleteId, 60).catch(() => []),
+    athleteId ? listGoals(athleteId).catch(() => []) : Promise.resolve([]),
+  ]);
 
   return (
     <div className="space-y-3 pb-2">
@@ -26,7 +30,7 @@ export default async function GoalsPage() {
         <div className="rule-coral mt-4" />
       </header>
 
-      <GoalsClient athleteId={athleteId} activities={activities} />
+      <GoalsClient initialGoals={goals} activities={activities} />
     </div>
   );
 }

@@ -4,28 +4,18 @@ import { useEffect, useState } from "react";
 import { RecoveryCard } from "@/components/breakdown/recovery-card";
 import { NextRideCard } from "@/components/breakdown/next-ride-card";
 import { Skeleton } from "@/components/skeleton";
-import { readDebriefEntry, writeDebriefPlan } from "@/lib/ai-cache";
 import type { ComputedMetrics, DeepNarration } from "@/lib/metrics/types";
 
 interface Props {
   activityId: string;
-  athleteId: string;
   metrics: ComputedMetrics;
 }
 
-export function PlanAIClient({ activityId, athleteId, metrics }: Props) {
+export function PlanAIClient({ activityId, metrics }: Props) {
   const [plan, setPlan] = useState<DeepNarration | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const cached = readDebriefEntry(athleteId, activityId)?.plan;
-    if (cached) {
-      // localStorage is browser-only — server can't pre-seed; one cascading
-      // render on mount is the cost of the cache hit avoiding the API call.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPlan(cached);
-      return;
-    }
     let cancelled = false;
     fetch(`/api/activities/${activityId}/plan`)
       .then((r) => {
@@ -35,7 +25,6 @@ export function PlanAIClient({ activityId, athleteId, metrics }: Props) {
       .then((data: { deep: DeepNarration }) => {
         if (cancelled) return;
         setPlan(data.deep);
-        writeDebriefPlan(athleteId, activityId, data.deep);
       })
       .catch((err: Error) => {
         if (cancelled) return;
@@ -44,7 +33,7 @@ export function PlanAIClient({ activityId, athleteId, metrics }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [activityId, athleteId]);
+  }, [activityId]);
 
   if (error && !plan) {
     return (

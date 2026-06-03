@@ -1,37 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Plus, Target, ChevronDown, ChevronUp } from "lucide-react";
 import { GoalCard } from "./goal-card";
 import { GoalFormSheet } from "./goal-form-sheet";
-import {
-  deleteGoal,
-  readGoals,
-  upsertGoal,
-} from "@/lib/goals/storage";
 import { computeGoalReadiness } from "@/lib/goals/progress";
 import { cn } from "@/lib/cn";
 import type { Goal } from "@/lib/goals/types";
 import type { Activity } from "@/lib/strava/types";
 
 interface Props {
-  athleteId: string;
+  /** Server-rendered initial list — comes from the DB via the page server component. */
+  initialGoals: Goal[];
   activities: Activity[];
 }
 
-export function GoalsClient({ athleteId, activities }: Props) {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+export function GoalsClient({ initialGoals, activities }: Props) {
+  const [goals, setGoals] = useState<Goal[]>(initialGoals);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<Goal | null>(null);
   const [showArchive, setShowArchive] = useState(false);
-
-  useEffect(() => {
-    // localStorage is browser-only — server can't pre-seed.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setGoals(readGoals(athleteId));
-    setHydrated(true);
-  }, [athleteId]);
+  const [saving, setSaving] = useState(false);
 
   function handleCreate() {
     setEditing(null);
@@ -41,36 +30,50 @@ export function GoalsClient({ athleteId, activities }: Props) {
     setEditing(goal);
     setSheetOpen(true);
   }
-  function handleDelete(goal: Goal) {
+
+  async function handleDelete(goal: Goal) {
     if (typeof window !== "undefined" && !window.confirm(`Delete "${goal.title}"?`)) return;
-    setGoals(deleteGoal(athleteId, goal.id));
-  }
-  function handleSave(goal: Goal) {
-    setGoals(upsertGoal(athleteId, goal));
-    setSheetOpen(false);
-    setEditing(null);
+    const prev = goals;
+    setGoals(prev.filter((g) => g.id !== goal.id));
+    try {
+      const res = await fetch(`/api/goals/${goal.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`delete ${res.status}`);
+    } catch (err) {
+      console.error(err);
+      setGoals(prev);
+      alert("Couldn't delete the goal — try again.");
+    }
   }
 
-  // Partition active vs archived (manually archived OR event date passed).
+  async function handleSave(goal: Goal) {
+    setSaving(true);
+    const isUpdate = goals.some((g) => g.id === goal.id);
+    const prev = goals;
+    setGoals(isUpdate ? prev.map((g) => (g.id === goal.id ? goal : g)) : [goal, ...prev]);
+    setSheetOpen(false);
+    setEditing(null);
+    try {
+      const res = await fetch(isUpdate ? `/api/goals/${goal.id}` : `/api/goals`, {
+        method: isUpdate ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(goal),
+      });
+      if (!res.ok) throw new Error(`save ${res.status}`);
+    } catch (err) {
+      console.error(err);
+      setGoals(prev);
+      alert("Couldn't save the goal — try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const active: Goal[] = [];
   const archived: Goal[] = [];
   for (const g of goals) {
     const r = computeGoalReadiness(g, activities);
     if (g.archivedAt || r.eventPast) archived.push(g);
     else active.push(g);
-  }
-
-  if (!hydrated) {
-    return (
-      <div className="space-y-3 mt-5">
-        {[0, 1].map((i) => (
-          <div key={i} className="card !p-5 animate-pulse">
-            <div className="h-4 w-1/3 bg-cream-deep rounded-md mb-3" />
-            <div className="h-3 w-2/3 bg-cream-deep rounded-md" />
-          </div>
-        ))}
-      </div>
-    );
   }
 
   if (active.length === 0 && archived.length === 0) {
@@ -99,28 +102,26 @@ export function GoalsClient({ athleteId, activities }: Props) {
         <button
           type="button"
           onClick={handleCreate}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-coral text-white text-[12px] font-display font-bold shadow-[0_6px_16px_-6px_rgba(242,84,27,0.55)] hover:bg-coral-700 transition-colors"
+          disabled={saving}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-coral text-white text-[12px] font-display font-bold shadow-[0_6px_16px_-6px_rgba(242,84,27,0.55)] hover:bg-coral-700 transition-colors disabled:opacity-60"
         >
           <Plus size={13} strokeWidth={2.8} />
           New goal
         </button>
       </div>
 
-      {/* Active */}
       <div className="space-y-3 mt-4">
         {active.map((g) => (
           <GoalCard
             key={g.id}
             goal={g}
             activities={activities}
-            athleteId={athleteId}
             onEdit={handleEdit}
             onDelete={handleDelete}
           />
         ))}
       </div>
 
-      {/* Archived */}
       {archived.length > 0 && (
         <div className="mt-6">
           <button
@@ -141,7 +142,6 @@ export function GoalsClient({ athleteId, activities }: Props) {
                 key={g.id}
                 goal={g}
                 activities={activities}
-                athleteId={athleteId}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />

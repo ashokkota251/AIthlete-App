@@ -5,6 +5,7 @@ import {
   STRAVA_ATHLETE_URL,
 } from "@/lib/strava/endpoints";
 import { resolveAthleteId } from "@/lib/athlete-id";
+import { touchUser } from "@/lib/db/users";
 
 async function refreshStravaToken(refreshToken: string) {
   const body = new URLSearchParams({
@@ -187,6 +188,19 @@ export const authConfig: NextAuthConfig = {
       session.error = token.error as string | undefined;
       if (session.user && cleanId) {
         session.user.id = cleanId;
+      }
+      // Track last-active per user — fire-and-forget so a slow DB never
+      // blocks the session response. If the DB env isn't configured we
+      // silently no-op and surface the error in the server log only.
+      if (cleanId) {
+        touchUser({
+          id: cleanId,
+          name: session.user?.name ?? null,
+          username: (token.athleteUsername as string | undefined) ?? null,
+          avatarUrl: session.user?.image ?? null,
+        }).catch((err) => {
+          console.error("[auth/session] touchUser failed:", err);
+        });
       }
       return session;
     },

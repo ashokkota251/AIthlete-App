@@ -13,7 +13,6 @@ import type { Activity, ActivityType } from "@/lib/strava/types";
 interface Props {
   goal: Goal;
   activities: Activity[];
-  athleteId: string;
   onEdit: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
 }
@@ -38,14 +37,13 @@ function eventDateLabel(iso: string): string {
   });
 }
 
-export function GoalCard({ goal, activities, athleteId, onEdit, onDelete }: Props) {
+export function GoalCard({ goal, activities, onEdit, onDelete }: Props) {
   const readiness = computeGoalReadiness(goal, activities);
   const unit = goal.metric === "distance" ? "km" : "h";
   const archived = !!goal.archivedAt || readiness.eventPast;
 
   return (
     <article className={cn("card reveal !p-5", archived && "opacity-70")}>
-      {/* Top row: sport + title + actions */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
           <span className="size-9 rounded-xl bg-coral-50 grid place-items-center text-coral shrink-0">
@@ -82,7 +80,6 @@ export function GoalCard({ goal, activities, athleteId, onEdit, onDelete }: Prop
         </div>
       </div>
 
-      {/* Readiness row */}
       <div className="mt-4 flex items-center gap-4">
         <GoalProgressRing
           percent={readiness.readinessRatio}
@@ -131,8 +128,7 @@ export function GoalCard({ goal, activities, athleteId, onEdit, onDelete }: Prop
         </div>
       </div>
 
-      {/* AI tip */}
-      {!archived && <GoalTipSection goal={goal} athleteId={athleteId} />}
+      {!archived && <GoalTipSection goal={goal} />}
     </article>
   );
 }

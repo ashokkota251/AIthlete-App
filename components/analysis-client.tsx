@@ -3,26 +3,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnalysisView } from "@/components/analysis-view";
 import { AnalysisStreamingSkeleton } from "@/components/analysis-streaming-skeleton";
-import { readAnalysisCache, writeAnalysisCache } from "@/lib/ai-cache";
 import type { AnalysisResult } from "@/lib/ai/analysis";
-
-interface Props {
-  athleteId: string;
-}
 
 export const ANALYSIS_REGENERATE_EVENT = "aithlete:analysis:regenerate";
 
-export function AnalysisClient({ athleteId }: Props) {
+export function AnalysisClient() {
   const [data, setData] = useState<AnalysisResult | null>(null);
   const [count, setCount] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchFresh = useCallback(async () => {
+  const load = useCallback(async (fresh: boolean) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/analysis", { method: "POST" });
+      const res = await fetch(`/api/analysis${fresh ? "?fresh=1" : ""}`, {
+        method: "POST",
+      });
       if (!res.ok) throw new Error(`analysis ${res.status}`);
       const json = (await res.json()) as {
         analysis: AnalysisResult;
@@ -30,35 +27,28 @@ export function AnalysisClient({ athleteId }: Props) {
       };
       setData(json.analysis);
       setCount(json.count);
-      writeAnalysisCache(athleteId, json.analysis, json.count);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, [athleteId]);
+  }, []);
 
   useEffect(() => {
-    const cached = readAnalysisCache(athleteId);
-    if (cached) {
-      // localStorage is browser-only — server can't pre-seed; one cascading
-      // render on mount is the cost of the cache hit avoiding the API call.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setData(cached.data);
-      setCount(cached.count);
-      return;
-    }
-    fetchFresh();
-  }, [athleteId, fetchFresh]);
+    // Fire the initial fetch — setState happens inside load() but is the
+    // intended one-time cascade on mount, same pattern as the other clients.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load(false);
+  }, [load]);
 
   useEffect(() => {
     function onRegenerate() {
-      fetchFresh();
+      load(true);
     }
     window.addEventListener(ANALYSIS_REGENERATE_EVENT, onRegenerate);
     return () =>
       window.removeEventListener(ANALYSIS_REGENERATE_EVENT, onRegenerate);
-  }, [fetchFresh]);
+  }, [load]);
 
   if (error && !data) {
     return (

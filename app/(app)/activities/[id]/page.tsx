@@ -67,11 +67,7 @@ export default async function ActivityDebriefPage({ params }: PageProps) {
       />
 
       {isRecent ? (
-        <DebriefAIClient
-          activityId={id}
-          athleteId={athleteId}
-          metrics={metrics}
-        />
+        <DebriefAIClient activityId={id} metrics={metrics} />
       ) : (
         <div className="rounded-card border border-line bg-white/60 px-3.5 py-3 text-[12.5px] leading-snug text-muted flex items-start gap-2.5">
           <Sparkles size={14} className="text-coral shrink-0 mt-0.5" />
@@ -127,13 +123,7 @@ export default async function ActivityDebriefPage({ params }: PageProps) {
       <SectionHeader label="Splits" Icon={ListOrdered} delay={4} />
       <SplitsDetailTable splits={metrics.splits} hasPower={hasPower} delay={4} />
 
-      {isRecent && (
-        <PlanAIClient
-          activityId={id}
-          athleteId={athleteId}
-          metrics={metrics}
-        />
-      )}
+      {isRecent && <PlanAIClient activityId={id} metrics={metrics} />}
 
       <p className="text-center text-[11px] text-muted pt-2 pb-1">
         Powered by Strava · {new Date(activity.startDate).getFullYear()}

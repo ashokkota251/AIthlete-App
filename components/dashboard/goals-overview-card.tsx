@@ -1,18 +1,14 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { ArrowUpRight, Target } from "lucide-react";
 import { ActivityIcon } from "@/components/activity-icon";
 import { GoalProgressRing } from "@/components/goals/goal-progress-ring";
 import { computeGoalReadiness, computeSentiment } from "@/lib/goals/progress";
-import { readGoals } from "@/lib/goals/storage";
 import { cn } from "@/lib/cn";
 import type { Goal, TipSentiment } from "@/lib/goals/types";
 import type { Activity, ActivityType } from "@/lib/strava/types";
 
 interface Props {
-  athleteId: string;
+  goals: Goal[];
   activities: Activity[];
 }
 
@@ -40,26 +36,7 @@ const SENTIMENT_DOT: Record<TipSentiment, string> = {
   at_risk: "bg-red-500",
 };
 
-export function GoalsOverviewCard({ athleteId, activities }: Props) {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    // localStorage is browser-only — server can't pre-seed.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setGoals(readGoals(athleteId));
-    setHydrated(true);
-  }, [athleteId]);
-
-  if (!hydrated) {
-    return (
-      <div className="card reveal delay-4 animate-pulse">
-        <div className="h-3 w-1/3 bg-cream-deep rounded-md mb-3" />
-        <div className="h-12 w-full bg-cream-deep rounded-md" />
-      </div>
-    );
-  }
-
+export function GoalsOverviewCard({ goals, activities }: Props) {
   const active = goals
     .map((g) => {
       const readiness = computeGoalReadiness(g, activities);
@@ -149,9 +126,7 @@ export function GoalsOverviewCard({ athleteId, activities }: Props) {
                       longest {readiness.longestRecent} / {goal.eventTarget} {unit}
                     </span>
                     <span className="text-ink-300">·</span>
-                    <span>
-                      {readiness.weeksUntilEvent}w to go
-                    </span>
+                    <span>{readiness.weeksUntilEvent}w to go</span>
                   </div>
                 </div>
               </Link>

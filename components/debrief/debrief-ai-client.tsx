@@ -6,12 +6,10 @@ import { HeroStats } from "@/components/debrief/hero-stats";
 import { PointsList } from "@/components/debrief/points-list";
 import { NextActionCard } from "@/components/debrief/next-action-card";
 import { Skeleton } from "@/components/skeleton";
-import { readDebriefEntry, writeDebriefNarration } from "@/lib/ai-cache";
 import type { ComputedMetrics, DebriefNarration } from "@/lib/metrics/types";
 
 interface Props {
   activityId: string;
-  athleteId: string;
   metrics: ComputedMetrics;
 }
 
@@ -20,19 +18,11 @@ function titleFromNextAction(s: string): string {
   return split[0]?.trim() ?? "Do this next";
 }
 
-export function DebriefAIClient({ activityId, athleteId, metrics }: Props) {
+export function DebriefAIClient({ activityId, metrics }: Props) {
   const [narration, setNarration] = useState<DebriefNarration | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const cached = readDebriefEntry(athleteId, activityId)?.debrief;
-    if (cached) {
-      // localStorage is browser-only — server can't pre-seed; one cascading
-      // render on mount is the cost of the cache hit avoiding the API call.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setNarration(cached);
-      return;
-    }
     let cancelled = false;
     fetch(`/api/activities/${activityId}/debrief`)
       .then((r) => {
@@ -42,7 +32,6 @@ export function DebriefAIClient({ activityId, athleteId, metrics }: Props) {
       .then((data: { narration: DebriefNarration }) => {
         if (cancelled) return;
         setNarration(data.narration);
-        writeDebriefNarration(athleteId, activityId, data.narration);
       })
       .catch((err: Error) => {
         if (cancelled) return;
@@ -51,7 +40,7 @@ export function DebriefAIClient({ activityId, athleteId, metrics }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [activityId, athleteId]);
+  }, [activityId]);
 
   if (error && !narration) {
     return (
