@@ -84,6 +84,10 @@ export default {
           "0%": { opacity: "0", transform: "translateX(24px)" },
           "100%": { opacity: "1", transform: "translateX(0)" },
         },
+        slideUp: {
+          "0%": { opacity: "0", transform: "translateY(28px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
         drawLine: {
           "0%": { strokeDashoffset: "var(--draw-length, 600)" },
           "100%": { strokeDashoffset: "0" },
@@ -101,6 +105,7 @@ export default {
         rise: "rise 0.55s cubic-bezier(0.2,0.7,0.2,1) backwards",
         fadeIn: "fadeIn 0.4s ease backwards",
         slideIn: "slideIn 0.34s cubic-bezier(0.2,0.7,0.2,1) backwards",
+        slideUp: "slideUp 0.38s cubic-bezier(0.2,0.7,0.2,1) backwards",
         drawLine: "drawLine 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards",
         pulseDot: "pulseDot 1.6s ease-in-out infinite",
         shimmer: "shimmer 1.8s linear infinite",

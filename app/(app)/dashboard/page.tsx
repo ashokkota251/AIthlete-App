@@ -8,8 +8,7 @@ import { fallbackDebrief } from "@/lib/ai/debrief-prompts";
 import { acuteChronicRatio } from "@/lib/training";
 import { LatestDebriefHero } from "@/components/dashboard/latest-debrief-hero";
 import { TodayCard } from "@/components/dashboard/today-card";
-import { FormLoadCard } from "@/components/dashboard/form-load-card";
-import { RoadToGoalCard } from "@/components/dashboard/road-to-goal-card";
+import { GoalsOverviewCard } from "@/components/dashboard/goals-overview-card";
 import { MotivationStrip } from "@/components/dashboard/motivation-strip";
 import { Avatar } from "@/components/ui/avatar";
 import { ArrowUpRight, AlertTriangle } from "lucide-react";
@@ -22,7 +21,7 @@ export default async function DashboardPage() {
   const athleteId = resolveAthleteId(session?.stravaAthleteId);
   const sessionName = session?.user?.name ?? "Athlete";
 
-  const [activities, athlete, stats] = await Promise.all([
+  const [activities, athlete] = await Promise.all([
     provider.getRecentActivities(athleteId, 30).catch(() => [] as never[]),
     provider.getAthleteProfile(athleteId).catch(
       (): AthleteProfile => ({
@@ -34,7 +33,6 @@ export default async function DashboardPage() {
         avatarUrl: session?.user?.image ?? null,
       }),
     ),
-    provider.getAthleteStats(athleteId).catch(() => null),
   ]);
   const stravaOffline = activities.length === 0;
 
@@ -116,13 +114,10 @@ export default async function DashboardPage() {
       {/* ── 2 · today's call ───────────────────────────── */}
       <TodayCard band={acr.band} acrRatio={acr.ratio} readiness="moderate" />
 
-      {/* ── 3 · form & load ────────────────────────────── */}
-      <FormLoadCard activities={activities} />
+      {/* ── 3 · goals overview ─────────────────────────── */}
+      <GoalsOverviewCard athleteId={athleteId} activities={activities} />
 
-      {/* ── 4 · road to goal ───────────────────────────── */}
-      <RoadToGoalCard stats={stats} />
-
-      {/* ── 5 · motivation strip ───────────────────────── */}
+      {/* ── 4 · motivation strip ───────────────────────── */}
       <MotivationStrip activities={activities} />
 
       {/* ── CTA to weekly analysis ─────────────────────── */}

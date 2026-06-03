@@ -8,6 +8,7 @@ import {
   ChartLine,
   MessageCircle,
   CircleUserRound,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -22,6 +23,7 @@ interface Tab {
 const TABS: Tab[] = [
   { href: "/dashboard", label: "Home", Icon: House },
   { href: "/activities", label: "Activity", Icon: Footprints, matchPrefix: ["/activities"] },
+  { href: "/goals", label: "Goals", Icon: Target },
   { href: "/analysis", label: "Analyse", Icon: ChartLine },
   { href: "/coach", label: "Coach", Icon: MessageCircle },
   { href: "/profile", label: "Profile", Icon: CircleUserRound },
