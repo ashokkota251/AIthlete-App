@@ -78,6 +78,17 @@ async function initSchema(): Promise<void> {
       ],
       "write",
     );
+    // Idempotent column additions for in-place migration. SQLite has no
+    // "ADD COLUMN IF NOT EXISTS", so check pragma first.
+    const info = await c.execute(
+      `SELECT name FROM pragma_table_info('goal_tips')`,
+    );
+    const hasLastActivityId = info.rows.some(
+      (r) => (r.name as string) === "last_activity_id",
+    );
+    if (!hasLastActivityId) {
+      await c.execute(`ALTER TABLE goal_tips ADD COLUMN last_activity_id TEXT`);
+    }
   })();
   return _initPromise;
 }

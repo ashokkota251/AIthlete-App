@@ -32,6 +32,7 @@ const tipEntrySchema = z.object({
   tip: z.object({
     headline: z.string(),
     sentiment: z.enum(["ready", "building", "behind", "at_risk"]),
+    readinessPercent: z.number().min(0).max(100).optional(),
     status: z.string(),
     actions: z.array(z.string()),
     improve: z.string(),
@@ -107,7 +108,12 @@ export async function POST(req: Request) {
       counts.goals++;
     }
     for (const t of body.tips ?? []) {
-      await insertTipIfAbsent(userId, t.goalId, t.tipDate, t.tip);
+      // Old localStorage tips predate readinessPercent; default to a middle
+      // value so the type contract holds without rewriting old data.
+      await insertTipIfAbsent(userId, t.goalId, t.tipDate, {
+        ...t.tip,
+        readinessPercent: t.tip.readinessPercent ?? 50,
+      });
       counts.tips++;
     }
     for (const a of body.analysis ?? []) {

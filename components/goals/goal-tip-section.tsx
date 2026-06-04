@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Sparkles, ArrowRight, Lightbulb } from "lucide-react";
 import { Skeleton } from "@/components/skeleton";
 import { cn } from "@/lib/cn";
-import type { Goal, GoalTip, TipSentiment } from "@/lib/goals/types";
+import type { GoalTip, TipSentiment } from "@/lib/goals/types";
 
 interface Props {
-  goal: Goal;
+  /** Null while the parent is still fetching. */
+  tip: GoalTip | null;
 }
 
 const SENTIMENT_STYLES: Record<
@@ -20,40 +20,8 @@ const SENTIMENT_STYLES: Record<
   at_risk: { dot: "bg-red-500", chip: "bg-red-50 text-red-700", label: "At risk" },
 };
 
-export function GoalTipSection({ goal }: Props) {
-  const [tip, setTip] = useState<GoalTip | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    // Set loading on mount — intentional one-time cascade so the skeleton shows
-    // until the fetch resolves.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    fetch(`/api/goals/${goal.id}/tip`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`tip ${r.status}`);
-        return r.json();
-      })
-      .then((data: { tip: GoalTip }) => {
-        if (cancelled) return;
-        setTip(data.tip);
-      })
-      .catch((err: Error) => {
-        if (cancelled) return;
-        setError(err.message);
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [goal.id]);
-
-  if (loading || (!tip && !error)) {
+export function GoalTipSection({ tip }: Props) {
+  if (!tip) {
     return (
       <div className="mt-4 space-y-2">
         <Skeleton className="h-4 w-3/4" />
@@ -64,15 +32,6 @@ export function GoalTipSection({ goal }: Props) {
     );
   }
 
-  if (error && !tip) {
-    return (
-      <div className="mt-4 text-[12px] text-muted">
-        Tip unavailable — refresh to try again.
-      </div>
-    );
-  }
-
-  if (!tip) return null;
   const styles = SENTIMENT_STYLES[tip.sentiment];
 
   return (

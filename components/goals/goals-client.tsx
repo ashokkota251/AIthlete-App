@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, Target, ChevronDown, ChevronUp } from "lucide-react";
 import { GoalCard } from "./goal-card";
 import { GoalFormSheet } from "./goal-form-sheet";
-import { computeGoalReadiness } from "@/lib/goals/progress";
+import { isGoalEventPast } from "@/lib/goals/progress";
 import { cn } from "@/lib/cn";
 import type { Goal } from "@/lib/goals/types";
 import type { Activity } from "@/lib/strava/types";
@@ -71,8 +71,7 @@ export function GoalsClient({ initialGoals, activities }: Props) {
   const active: Goal[] = [];
   const archived: Goal[] = [];
   for (const g of goals) {
-    const r = computeGoalReadiness(g, activities);
-    if (g.archivedAt || r.eventPast) archived.push(g);
+    if (g.archivedAt || isGoalEventPast(g)) archived.push(g);
     else active.push(g);
   }
 

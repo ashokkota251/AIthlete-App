@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { ArrowUpRight, Target } from "lucide-react";
+import { ArrowUpRight, Target, TrendingUp, TrendingDown } from "lucide-react";
 import { ActivityIcon } from "@/components/activity-icon";
-import { GoalProgressRing } from "@/components/goals/goal-progress-ring";
-import { computeGoalReadiness, computeSentiment } from "@/lib/goals/progress";
+import {
+  computeTrainingStats,
+  fallbackReadinessPercent,
+  fallbackSentiment,
+  isGoalEventPast,
+} from "@/lib/goals/progress";
 import { cn } from "@/lib/cn";
 import type { Goal, TipSentiment } from "@/lib/goals/types";
 import type { Activity, ActivityType } from "@/lib/strava/types";
@@ -38,11 +42,15 @@ const SENTIMENT_DOT: Record<TipSentiment, string> = {
 
 export function GoalsOverviewCard({ goals, activities }: Props) {
   const active = goals
+    .filter((g) => !g.archivedAt && !isGoalEventPast(g))
     .map((g) => {
-      const readiness = computeGoalReadiness(g, activities);
-      return { goal: g, readiness, sentiment: computeSentiment(readiness) };
+      const stats = computeTrainingStats(g, activities);
+      // Dashboard avoids per-goal AI calls — uses the same heuristic the
+      // AI fallback uses so the dot/order are still meaningful.
+      const sentiment = fallbackSentiment(stats);
+      const percent = fallbackReadinessPercent(stats);
+      return { goal: g, stats, sentiment, percent };
     })
-    .filter(({ goal, readiness }) => !goal.archivedAt && !readiness.eventPast)
     .sort((a, b) => SENTIMENT_RANK[a.sentiment] - SENTIMENT_RANK[b.sentiment]);
 
   if (active.length === 0) {
@@ -88,51 +96,52 @@ export function GoalsOverviewCard({ goals, activities }: Props) {
       </div>
 
       <ul className="mt-3 space-y-3 list-none">
-        {shown.map(({ goal, readiness, sentiment }) => {
-          const unit = goal.metric === "distance" ? "km" : "h";
-          return (
-            <li key={goal.id}>
-              <Link
-                href="/goals"
-                className="flex items-center gap-3 -mx-1 px-1 py-1 rounded-[12px] hover:bg-cream-deep/40 transition-colors"
-              >
-                <GoalProgressRing
-                  percent={readiness.readinessRatio}
-                  size={42}
-                  stroke={5}
-                  subline=""
+        {shown.map(({ goal, stats, sentiment, percent }) => (
+          <li key={goal.id}>
+            <Link
+              href="/goals"
+              className="flex items-center gap-3 -mx-1 px-1 py-1.5 rounded-[12px] hover:bg-cream-deep/40 transition-colors"
+            >
+              <span className="size-8 rounded-xl bg-coral-50 grid place-items-center text-coral shrink-0">
+                <ActivityIcon
+                  type={SPORT_TO_ICON_TYPE[goal.sport]}
+                  size={14}
                 />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="size-5 rounded-md bg-coral-50 grid place-items-center text-coral shrink-0">
-                      <ActivityIcon
-                        type={SPORT_TO_ICON_TYPE[goal.sport]}
-                        size={11}
-                      />
-                    </span>
-                    <span className="font-display font-bold text-[13px] text-ink-900 truncate">
-                      {goal.title}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-[11.5px] text-muted flex items-center gap-1.5 nums">
-                    <span
-                      className={cn(
-                        "size-1.5 rounded-full",
-                        SENTIMENT_DOT[sentiment],
-                      )}
-                      aria-hidden
-                    />
-                    <span>
-                      longest {readiness.longestRecent} / {goal.eventTarget} {unit}
-                    </span>
-                    <span className="text-ink-300">·</span>
-                    <span>{readiness.weeksUntilEvent}w to go</span>
-                  </div>
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-display font-bold text-[13px] text-ink-900 truncate">
+                    {goal.title}
+                  </span>
+                  <span className="font-display font-bold text-[12px] text-coral nums shrink-0">
+                    {percent}%
+                  </span>
                 </div>
-              </Link>
-            </li>
-          );
-        })}
+                <div className="mt-1 text-[11.5px] text-muted flex items-center gap-1.5 nums">
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      SENTIMENT_DOT[sentiment],
+                    )}
+                    aria-hidden
+                  />
+                  <span>
+                    {stats.totalSessions} sessions · {stats.weeklyHours} h/wk
+                  </span>
+                  <span className="text-ink-300">·</span>
+                  <span className="flex items-center gap-0.5">
+                    {stats.trendUp ? (
+                      <TrendingUp size={10} strokeWidth={2.6} className="text-good" />
+                    ) : (
+                      <TrendingDown size={10} strokeWidth={2.6} className="text-amber" />
+                    )}
+                    {stats.weeksUntilEvent}w
+                  </span>
+                </div>
+              </div>
+            </Link>
+          </li>
+        ))}
       </ul>
 
       {extra > 0 && (

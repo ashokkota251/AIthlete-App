@@ -1,13 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { CalendarDays, Pencil, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { ActivityIcon } from "@/components/activity-icon";
 import { GoalProgressRing } from "./goal-progress-ring";
 import { GoalTipSection } from "./goal-tip-section";
 import { cn } from "@/lib/cn";
-import { computeGoalReadiness } from "@/lib/goals/progress";
+import { computeTrainingStats, isGoalEventPast } from "@/lib/goals/progress";
 import { SPORT_LABEL } from "@/lib/goals/sport-map";
-import type { Goal } from "@/lib/goals/types";
+import type { Goal, GoalTip, GoalTrainingStats } from "@/lib/goals/types";
 import type { Activity, ActivityType } from "@/lib/strava/types";
 
 interface Props {
@@ -38,9 +39,37 @@ function eventDateLabel(iso: string): string {
 }
 
 export function GoalCard({ goal, activities, onEdit, onDelete }: Props) {
-  const readiness = computeGoalReadiness(goal, activities);
-  const unit = goal.metric === "distance" ? "km" : "h";
-  const archived = !!goal.archivedAt || readiness.eventPast;
+  // Deterministic stats render immediately from props (no network).
+  const initialStats = computeTrainingStats(goal, activities);
+  const archived = !!goal.archivedAt || isGoalEventPast(goal);
+
+  const [tip, setTip] = useState<GoalTip | null>(null);
+  const [stats, setStats] = useState<GoalTrainingStats>(initialStats);
+
+  useEffect(() => {
+    if (archived) return;
+    let cancelled = false;
+    fetch(`/api/goals/${goal.id}/tip`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`tip ${r.status}`);
+        return r.json();
+      })
+      .then((data: { tip: GoalTip; stats: GoalTrainingStats }) => {
+        if (cancelled) return;
+        setTip(data.tip);
+        setStats(data.stats);
+      })
+      .catch(() => {
+        /* tip section handles the error display via its own loading guard */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [goal.id, archived]);
+
+  const sportEntries = Object.entries(stats.sportBreakdown).sort(
+    (a, b) => (b[1] ?? 0) - (a[1] ?? 0),
+  );
 
   return (
     <article className={cn("card reveal !p-5", archived && "opacity-70")}>
@@ -80,55 +109,74 @@ export function GoalCard({ goal, activities, onEdit, onDelete }: Props) {
         </div>
       </div>
 
+      {/* Readiness ring + training stats */}
       <div className="mt-4 flex items-center gap-4">
         <GoalProgressRing
-          percent={readiness.readinessRatio}
+          percent={(tip?.readinessPercent ?? 0) / 100}
           size={74}
           subline="READY"
         />
         <div className="flex-1 min-w-0">
           <div className="font-display font-bold text-[13px] text-coral leading-none">
-            {readiness.eventPast
+            {archived
               ? "Event passed"
-              : readiness.weeksUntilEvent > 0
-                ? `${readiness.weeksUntilEvent} week${readiness.weeksUntilEvent === 1 ? "" : "s"} to go`
-                : `${readiness.daysUntilEvent} day${readiness.daysUntilEvent === 1 ? "" : "s"} to go`}
+              : stats.weeksUntilEvent > 0
+                ? `${stats.weeksUntilEvent} week${stats.weeksUntilEvent === 1 ? "" : "s"} to go`
+                : `${stats.daysUntilEvent} day${stats.daysUntilEvent === 1 ? "" : "s"} to go`}
           </div>
-          <div className="mt-2 font-display font-extrabold text-[24px] leading-none nums">
-            {readiness.longestRecent}
-            <span className="text-[13px] font-semibold text-muted ml-1.5">
-              of {goal.eventTarget} {unit} longest
+          <div className="mt-2 font-display font-extrabold text-[22px] leading-none nums">
+            {stats.totalSessions}
+            <span className="text-[12px] font-semibold text-muted ml-1.5">
+              sessions · 60d
             </span>
           </div>
           {!archived && (
             <div className="mt-1.5 flex items-center flex-wrap gap-x-3 gap-y-1 text-[11.5px] font-medium text-ink-700">
               <span className="nums">
                 <span className="text-muted">Weekly: </span>
-                {readiness.weeklyAvg} {unit}
+                {stats.weeklyHours} h
               </span>
               <span className="text-ink-300">·</span>
-              <span className="nums">
-                {readiness.sessionsPerWeek}/wk
-              </span>
+              <span className="nums">{stats.sessionsPerWeek}/wk</span>
               <span
                 className={cn(
                   "flex items-center gap-1 nums",
-                  readiness.trendUp ? "text-good" : "text-amber",
+                  stats.trendUp ? "text-good" : "text-amber",
                 )}
               >
-                {readiness.trendUp ? (
+                {stats.trendUp ? (
                   <TrendingUp size={11} strokeWidth={2.6} />
                 ) : (
                   <TrendingDown size={11} strokeWidth={2.6} />
                 )}
-                {readiness.trendUp ? "building" : "flat"}
+                {stats.trendUp ? "building" : "flat"}
               </span>
             </div>
           )}
         </div>
       </div>
 
-      {!archived && <GoalTipSection goal={goal} />}
+      {/* Sport breakdown — small chips so cross-training is visible */}
+      {!archived && sportEntries.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {sportEntries.map(([type, n]) => (
+            <span
+              key={type}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-pill bg-cream-deep/60 text-[11px] font-medium text-ink-700"
+            >
+              <ActivityIcon
+                type={type as ActivityType}
+                size={10}
+                className="text-coral"
+              />
+              <span className="nums">{n}</span>
+              <span className="text-muted">{type}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {!archived && <GoalTipSection tip={tip} />}
     </article>
   );
 }

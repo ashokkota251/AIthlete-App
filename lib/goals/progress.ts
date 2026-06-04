@@ -1,11 +1,10 @@
-import type { Activity } from "@/lib/strava/types";
+import type { Activity, ActivityType } from "@/lib/strava/types";
 import type {
   Goal,
   GoalActivitySummary,
-  GoalReadiness,
+  GoalTrainingStats,
   TipSentiment,
 } from "./types";
-import { activityMatchesGoalSport } from "./sport-map";
 
 const DAY_MS = 86_400_000;
 const LOOKBACK_DAYS = 60;
@@ -21,45 +20,40 @@ function parseISO(s: string): Date {
   return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
-function valueFor(a: Activity, metric: Goal["metric"]): number {
-  return metric === "distance" ? a.distance / 1000 : a.movingTime / 3600;
-}
-
-/** Compute readiness from last 60 days of activities matching the goal's sport. */
-export function computeGoalReadiness(
+/**
+ * Deterministic training snapshot — all activities, no sport filter.
+ * The AI consumes this plus the raw last-10 activities to judge readiness.
+ */
+export function computeTrainingStats(
   goal: Goal,
   activities: Activity[],
   now: Date = new Date(),
-): GoalReadiness {
+): GoalTrainingStats {
   const lookbackStart = new Date(now.getTime() - LOOKBACK_DAYS * DAY_MS);
   const eventDate = parseISO(goal.eventDate);
 
-  let longestRecent = 0;
-  let totalInWindow = 0;
-  let sessionsInWindow = 0;
-  let totalLast14 = 0;
-  let totalPrev14 = 0;
+  let totalSessions = 0;
+  let totalHours = 0;
+  let last14Hours = 0;
+  let prev14Hours = 0;
+  const sportBreakdown: Partial<Record<ActivityType, number>> = {};
   const fourteenAgo = new Date(now.getTime() - 14 * DAY_MS);
   const twentyEightAgo = new Date(now.getTime() - 28 * DAY_MS);
 
   for (const a of activities) {
-    if (!activityMatchesGoalSport(a.type, goal.sport)) continue;
     const date = new Date(a.startDate);
     if (date < lookbackStart || date > now) continue;
-    const v = valueFor(a, goal.metric);
-    totalInWindow += v;
-    sessionsInWindow += 1;
-    if (v > longestRecent) longestRecent = v;
-    if (date >= fourteenAgo) totalLast14 += v;
-    else if (date >= twentyEightAgo) totalPrev14 += v;
+    totalSessions += 1;
+    const hours = a.movingTime / 3600;
+    totalHours += hours;
+    sportBreakdown[a.type] = (sportBreakdown[a.type] ?? 0) + 1;
+    if (date >= fourteenAgo) last14Hours += hours;
+    else if (date >= twentyEightAgo) prev14Hours += hours;
   }
 
   const weeksInWindow = LOOKBACK_DAYS / 7;
-  const weeklyAvg = totalInWindow / weeksInWindow;
-  const sessionsPerWeek = sessionsInWindow / weeksInWindow;
-  const readinessRatio = goal.eventTarget > 0
-    ? Math.min(1, longestRecent / goal.eventTarget)
-    : 0;
+  const sessionsPerWeek = round1(totalSessions / weeksInWindow);
+  const weeklyHours = round1(totalHours / weeksInWindow);
 
   const daysUntilEvent = Math.round((eventDate.getTime() - now.getTime()) / DAY_MS);
   const weeksUntilEvent = Math.max(0, Math.ceil(daysUntilEvent / 7));
@@ -68,26 +62,34 @@ export function computeGoalReadiness(
     goalId: goal.id,
     metric: goal.metric,
     eventTarget: goal.eventTarget,
-    longestRecent: round1(longestRecent),
-    weeklyAvg: round1(weeklyAvg),
-    sessionsPerWeek: round1(sessionsPerWeek),
-    readinessRatio,
+    totalSessions,
+    sessionsPerWeek,
+    totalHours: round1(totalHours),
+    weeklyHours,
+    sportBreakdown,
     daysUntilEvent,
     weeksUntilEvent,
-    trendUp: totalLast14 > totalPrev14,
+    trendUp: last14Hours > prev14Hours,
     eventPast: daysUntilEvent < 0,
   };
 }
 
-/**
- * Sentiment is locked to deterministic readiness rules — the AI gets it as
- * input and phrases around it. Order matters: most-urgent first.
- */
-export function computeSentiment(r: GoalReadiness): TipSentiment {
-  if (r.readinessRatio >= 0.8 && r.weeksUntilEvent <= 3) return "ready";
-  if (r.weeksUntilEvent <= 4 && r.readinessRatio < 0.4) return "at_risk";
-  if (r.readinessRatio < 0.3 && !r.trendUp) return "behind";
+/** Fallback sentiment when the AI is unavailable. AI normally picks its own. */
+export function fallbackSentiment(s: GoalTrainingStats): TipSentiment {
+  if (s.totalSessions === 0) return s.weeksUntilEvent <= 4 ? "at_risk" : "behind";
+  if (s.weeksUntilEvent <= 3 && s.sessionsPerWeek >= 3 && s.trendUp) return "ready";
+  if (s.weeksUntilEvent <= 4 && s.sessionsPerWeek < 1.5) return "at_risk";
+  if (s.sessionsPerWeek < 1 && !s.trendUp) return "behind";
   return "building";
+}
+
+/** Fallback readiness percent — a rough proxy for when the AI is unavailable. */
+export function fallbackReadinessPercent(s: GoalTrainingStats): number {
+  // Combines volume (weekly hours capped at 8) and consistency (sessions/wk capped at 5).
+  const volumeScore = Math.min(1, s.weeklyHours / 8);
+  const consistencyScore = Math.min(1, s.sessionsPerWeek / 5);
+  const trendBonus = s.trendUp ? 0.1 : 0;
+  return Math.round(Math.min(1, volumeScore * 0.55 + consistencyScore * 0.35 + trendBonus) * 100);
 }
 
 export function summariseForAI(activities: Activity[], limit = 10): GoalActivitySummary[] {
@@ -103,7 +105,9 @@ export function summariseForAI(activities: Activity[], limit = 10): GoalActivity
   }));
 }
 
-export function defaultGoalTitle(goal: Pick<Goal, "sport" | "metric" | "eventTarget" | "eventDate">): string {
+export function defaultGoalTitle(
+  goal: Pick<Goal, "sport" | "metric" | "eventTarget" | "eventDate">,
+): string {
   const sport = goal.sport === "WeightTraining" ? "Strength" : goal.sport;
   const targetLabel =
     goal.metric === "distance" ? `${goal.eventTarget} km` : `${goal.eventTarget} h`;
@@ -112,6 +116,20 @@ export function defaultGoalTitle(goal: Pick<Goal, "sport" | "metric" | "eventTar
     day: "numeric",
   });
   return `${targetLabel} ${sport} on ${when}`;
+}
+
+/** Quick deadline check used for active/archived partitioning. */
+export function isGoalEventPast(goal: Goal, now: Date = new Date()): boolean {
+  return parseISO(goal.eventDate).getTime() < now.getTime() - DAY_MS;
+}
+
+/** Latest activity (by start_date) — used to invalidate the per-day tip cache. */
+export function latestActivityId(activities: Activity[]): string | null {
+  let best: Activity | null = null;
+  for (const a of activities) {
+    if (!best || new Date(a.startDate) > new Date(best.startDate)) best = a;
+  }
+  return best?.id ?? null;
 }
 
 function round1(n: number): number {

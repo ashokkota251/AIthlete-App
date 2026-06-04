@@ -31,24 +31,28 @@ export interface Goal {
 }
 
 /**
- * Deterministic snapshot of training capability — computed before the AI sees it.
- * Lookback window = last 60 days of activity, filtered to the goal's sport.
+ * Deterministic snapshot of recent training — computed before the AI sees it.
+ * Lookback window = last 60 days. Does NOT filter by goal sport: the user's
+ * full training picture (cycling + running + walking + workouts + everything)
+ * is what informs readiness. The AI judges how it adds up.
  */
-export interface GoalReadiness {
+export interface GoalTrainingStats {
   goalId: string;
   metric: GoalMetric;
   eventTarget: number;
-  /** Single longest session in the lookback — km or hours. */
-  longestRecent: number;
-  /** Average per-week volume — km or hours. */
-  weeklyAvg: number;
-  /** Sessions per week in this sport over the lookback. */
+  /** Total sessions across all sports in the window. */
+  totalSessions: number;
+  /** Sessions per week across all sports. */
   sessionsPerWeek: number;
-  /** longestRecent / eventTarget, capped at 1 for display. */
-  readinessRatio: number;
+  /** Total active hours across all sports in the window. */
+  totalHours: number;
+  /** Average hours per week across all sports. */
+  weeklyHours: number;
+  /** Map of sport family → session count in the window. */
+  sportBreakdown: Partial<Record<ActivityType, number>>;
   daysUntilEvent: number;
   weeksUntilEvent: number;
-  /** True when the last 14 days' volume exceeds the prior 14. */
+  /** True when the last 14 days' total hours exceed the prior 14. */
   trendUp: boolean;
   /** True when eventDate <= today. */
   eventPast: boolean;
@@ -59,6 +63,8 @@ export type TipSentiment = "ready" | "building" | "behind" | "at_risk";
 export interface GoalTip {
   headline: string;
   sentiment: TipSentiment;
+  /** AI's holistic judgment of readiness, 0–100. */
+  readinessPercent: number;
   status: string;
   actions: string[];
   improve: string;
